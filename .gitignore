@@ -1,0 +1,5 @@
+# Intellij Idea stuff
+.idea
+
+# mozart compilated files (so that future files will not be added)
+.ozf

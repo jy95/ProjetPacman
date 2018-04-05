@@ -1,0 +1,43 @@
+{
+    "version": "0.1.0",
+    "tasks": [
+        {
+            "taskName": "build",
+            "command": "ozc",
+            "windows": {
+                "command": "C:\\Program Files\\Mozart\\bin\\ozc.exe"
+            },
+            "isBuildCommand": true,
+            "isShellCommand": true,
+            "isBackground": true,
+            "args": [
+                "-c",
+                "${file}"
+            ],
+            "showOutput": "silent"
+        },
+        {
+            "taskName": "run",
+            "command": "ozengine",
+            "windows": {
+                "command": "C:\\Program Files\\Mozart\\bin\\ozengine.exe"
+            },
+            "isShellCommand": true,
+            "args": [
+                "${fileBasenameNoExtension}.ozf"
+            ],
+            "showOutput": "always",
+            "isTestCommand": true,
+            "isBackground": false
+        },
+        {
+            "taskName": "clean",
+            "command": "rm",
+            "isShellCommand": true,
+            "args": [
+                "${fileBasenameNoExtension}.ozf"
+            ],
+            "showOutput": "silent"
+        }
+    ]
+}
