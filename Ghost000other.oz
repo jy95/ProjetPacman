@@ -15,27 +15,28 @@ in
    % A way to decide which position should be take
    % TODO A finir
    fun{ChooseNextPosition PacmansPosition CurrentPosition ?BestPosition}
-        case PacmansPosition
-            of nil then BestPosition
-            [] P|T then PacmanPositioX PacmanPositionY ValidMoves Distances Left Right Up Down in
-                % X = row et Y = column
-                PacmanPositioX = P.position.x
-                PacmanPositionY = P.position.y
-                
-                % evaluation des possibilités
-                Left = pt(x: PacmanPositioX y: PacmanPositionY-1)
-                Right = pt(x: PacmanPositioX y: PacmanPositionY+1)
-                Up = pt(x: PacmanPositioX+1 y: PacmanPositionY)
-                Down = pt(x: PacmanPositioX-1 y: PacmanPositionY)
+            % X = row et Y = column
+            CurrentPositionX = CurrentPosition.x
+            CurrentPositionY = CurrentPosition.y
+            % les mouvements possibles
+            Left = pt(x: CurrentPositionX y: CurrentPositionY-1)
+            Right = pt(x: CurrentPositionX y: CurrentPositionY+1)
+            Up = pt(x: CurrentPositionX+1 y: CurrentPositionY)
+            Down = pt(x: CurrentPositionX-1 y: CurrentPositionY)
+            % seulement les mouvement valides
+            ValidMoves = {CommonUtils.sortValidMoves [Left Right Up Down] }
+        in
+            case PacmansPosition
+                of nil then BestPosition
+                [] P|T then Distances in
 
-                % seulement les mouvement valides
-                ValidMoves = {CommonUtils.sortValidMoves [Left Right Up Down] }
-                Distances = {CommonUtils.distancesTo ValidMoves P.position}
+                    % distance par rapport à la cible
+                    Distances = {CommonUtils.distancesTo ValidMoves P.position}
 
-                % TODO decider une manière ou d'une autre quelle direction on prend
+                    % TODO decider une manière ou d'une autre quelle direction on prend
                 
-                % TODO Mettre dans BestPosition un tuple du genre <position> ::= pt(x:<row> y:<column>)
-        end
+                    % TODO Mettre dans BestPosition un tuple du genre <position> ::= pt(x:<row> y:<column>)
+            end
    end
 
    % ID is a <ghost> ID
