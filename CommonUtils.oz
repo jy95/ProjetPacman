@@ -7,7 +7,7 @@ import
 export
    allowedMove:AllowedPosition
    sortValidMoves:SortValidMoves
-   distancesTo:DistancesTo
+   bestDirection:BestDirection
 define
    AllowedPosition
    SortValidMoves
@@ -15,7 +15,7 @@ define
    WantedColumn
    WantedElement
    DistanceBetween
-   DistancesTo
+   BestDirection
 in
    % A way to access the wanted NRow I want
    fun lazy{WantedRow List LineNumber}
@@ -67,11 +67,23 @@ in
         % racine de (xA − xB)2 + (yA − yB)2
         {Float.sqrt {IntToFloat ({Number.pow (P1.x - P2.x) 2} + {Number.pow (P1.y - P2.y) 2})} }
    end
-
-   fun{DistancesTo List Target}
-      case List
-        of H|T then thread {DistanceBetween H Target} end|{DistancesTo T Target}
-        [] nil then nil
-      end
-   end
+   
+   % Compute the best direction to take , based on previous one
+   % Inputs : Moves and Target are the current variable
+   % Inputs: BestMove and PreviousTarget keep trace of previous work
+   % ResultMove and ResultTarget are the final result
+   proc{BestDirection Moves Target BestMove PreviousTarget ResultMove ResultTarget}
+        case Moves
+            of H|T then 
+            % A more interessting target to hunt
+                if {DistanceBetween Target H} < {DistanceBetween PreviousTarget BestMove} then
+	                {BestDirection T Target H Target ResultMove ResultTarget}
+                else
+	                {BestDirection T Target BestMove PreviousTarget ResultMove ResultTarget}
+                end
+            [] nil then
+                ResultMove = BestMove
+                ResultTarget = PreviousTarget
+        end
+    end
 end

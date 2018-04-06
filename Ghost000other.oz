@@ -12,9 +12,8 @@ define
    % functions custom
    ChooseNextPosition
 in
-   % A way to decide which position should be take
-   % TODO A finir
-   fun{ChooseNextPosition PacmansPosition CurrentPosition ?BestPosition}
+   % A determinist way to decide which position should be taken by our ghost
+   fun{ChooseNextPosition PacmansPosition CurrentPosition BestPosition PreviousTarget}
             % X = row et Y = column
             CurrentPositionX = CurrentPosition.x
             CurrentPositionY = CurrentPosition.y
@@ -28,14 +27,21 @@ in
         in
             case PacmansPosition
                 of nil then BestPosition
-                [] P|T then Distances in
+                [] P|T then ResultMove ResultTarget LastTarget in
 
-                    % distance par rapport à la cible
-                    Distances = {CommonUtils.distancesTo ValidMoves P.position}
-
-                    % TODO decider une manière ou d'une autre quelle direction on prend
+                    % First iteration so take the first pacman I saw
+                    if PreviousTarget == nil then
+                        LastTarget = P
+                    else
+                        LastTarget = PreviousTarget
+                    end
+                    % Procédure qui va setter les deux variables local pour déterminer le bon choix
+                    {CommonUtils.bestDirection ValidMoves P.position BestPosition LastTarget ResultMove ResultTarget}
+                    % Probablement pas besoin d'un wait sur ResultMove ResultTarget
+                    % Puisque j'ai codé cette partie en determinist dataflow
                 
-                    % TODO Mettre dans BestPosition un tuple du genre <position> ::= pt(x:<row> y:<column>)
+                    % Appel récursif avec les nouveaux parametres
+                    {ChooseNextPosition T CurrentPosition ResultMove ResultTarget}
             end
    end
 
@@ -82,7 +88,7 @@ in
         % the pacman is considered on the board, if not, ID and P should be bound to null.
         [] move(ID P)|T then NextPosition in
             if OnBoard == 1 then
-                NextPosition = {ChooseNextPosition PacmansPosition Position Position}
+                NextPosition = {ChooseNextPosition PacmansPosition Position Position nil}
                 P = NextPosition
                 ID = GhostId
                 {TreatStream T GhostId NextPosition OnBoard PacmansPosition}
