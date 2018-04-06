@@ -17,18 +17,22 @@ in
    fun{ChooseNextPosition PacmansPosition CurrentPosition ?BestPosition}
         case PacmansPosition
             of nil then BestPosition
-            [] P|T then PacmanPositioX PacmanPositionY in
+            [] P|T then PacmanPositioX PacmanPositionY ValidMoves Distances Left Right Up Down in
                 % X = row et Y = column
                 PacmanPositioX = P.position.x
                 PacmanPositionY = P.position.y
                 
                 % evaluation des possibilités
-                % eval the path using simple thing : triangular stuff - hypoténuse
-                % Ou alors algo plus stupide ?
-                {CommonUtils.allowedMove PacmanPositioX+1 PacmanPositionY}
-                {CommonUtils.allowedMove PacmanPositioX PacmanPositionY+1}
-                {CommonUtils.allowedMove PacmanPositioX-1 PacmanPositionY}
-                {CommonUtils.allowedMove PacmanPositioX PacmanPositionY-1}
+                Left = pt(x: PacmanPositioX y: PacmanPositionY-1)
+                Right = pt(x: PacmanPositioX y: PacmanPositionY+1)
+                Up = pt(x: PacmanPositioX+1 y: PacmanPositionY)
+                Down = pt(x: PacmanPositioX-1 y: PacmanPositionY)
+
+                % seulement les mouvement valides
+                ValidMoves = {CommonUtils.sortValidMoves [Left Right Up Down] }
+                Distances = {CommonUtils.distancesTo ValidMoves P.position}
+
+                % TODO decider une manière ou d'une autre quelle direction on prend
                 
                 % TODO Mettre dans BestPosition un tuple du genre <position> ::= pt(x:<row> y:<column>)
         end
@@ -77,7 +81,7 @@ in
         % the pacman is considered on the board, if not, ID and P should be bound to null.
         [] move(ID P)|T then NextPosition in
             if OnBoard == 1 then
-                NextPosition = {ChooseNextPosition PacmansPosition Position}
+                NextPosition = {ChooseNextPosition PacmansPosition Position Position}
                 P = NextPosition
                 ID = GhostId
                 {TreatStream T GhostId NextPosition OnBoard PacmansPosition}
@@ -93,22 +97,22 @@ in
             {TreatStream T GhostId Position 0 nil}
 
         % pacmanPos(ID P): Inform that the pacman with <pacman> ID is now at <position> P.
-        [] pacmanPos(ID P) then
+        [] pacmanPos(ID P)|T then
             % TODO A finir
             {TreatStream T GhostId Position OnBoard PacmansPosition}
             
         % killPacman(ID): Inform that the pacman with <pacman> ID has been killed by you
-        [] killPacman(ID) then
+        [] killPacman(ID)|T then
             % TODO A finir : le virer dans PacmansPosition
             {TreatStream T GhostId Position OnBoard PacmansPosition}
 
         % deathPacman(ID): Inform that the pacman with <pacman> ID has been killed (by someone, you or another ghost).
-        [] deathPacman(ID) then
+        [] deathPacman(ID)|T then
             % TODO A finir : le virer dans PacmansPosition
             {TreatStream T GhostId Position OnBoard PacmansPosition}
 
         % setMode(M): Inform the new <mode> M
-        [] setMode(M) then
+        [] setMode(M)|T then
             % TODO A voir ce qu'on en fait
             {TreatStream T GhostId Position OnBoard PacmansPosition}
         
