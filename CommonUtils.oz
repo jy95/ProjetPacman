@@ -43,7 +43,7 @@ in
 	    false
       else
         % On se prend peut être un mur dans la figure 
-	    {WantedElement X Y} == 1
+	    {WantedElement X Y} \= 1
       end
    end
 

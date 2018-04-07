@@ -11,7 +11,44 @@ define
    TreatStream
    % functions custom
    ChooseNextPosition
+   TargetsStateModification
 in
+   % To handle new pacman or position of current pacman(s)
+   % Action : 'update' / 'remove' for the current state ; isDone : if filter/update is already done
+   % ID Position : pacman attributes
+   % Each element is only present once
+   fun{TargetsStateModification PacmansPosition Action IsDone ID Position}
+        case PacmansPosition
+            of nil then
+                case Action
+                    of 'update' then
+                        if IsDone then
+                            nil
+                        else
+                            target(position: Position id: ID)
+                        end
+                    [] 'remove' then
+                        % Nothing to do on empty list
+                        nil
+                end
+            [] P|T then
+                case Action
+                    of 'update' then
+                        if IsDone == false andthen P.id == ID then
+                            target(position: Position id: ID)|{TargetsStateModification T Action true ID Position}
+                        else
+                            P|{TargetsStateModification T Action IsDone ID Position}
+                        end
+                    [] 'remove' then
+                        if IsDone == false andthen P.id == ID then
+                            {TargetsStateModification T Action true ID Position}
+                        else
+                            P|{TargetsStateModification T Action IsDone ID Position}
+                        end
+                end
+        end
+   end
+
    % A determinist way to decide which position should be taken by our ghost
    fun{ChooseNextPosition PacmansPosition CurrentPosition BestPosition PreviousTarget}
             % X = row et Y = column
@@ -31,7 +68,7 @@ in
 
                     % First iteration so take the first pacman I saw
                     if PreviousTarget == nil then
-                        LastTarget = P
+                        LastTarget = P.position
                     else
                         LastTarget = PreviousTarget
                     end
@@ -105,18 +142,15 @@ in
 
         % pacmanPos(ID P): Inform that the pacman with <pacman> ID is now at <position> P.
         [] pacmanPos(ID P)|T then
-            % TODO A finir
-            {TreatStream T GhostId Position OnBoard PacmansPosition}
+            {TreatStream T GhostId Position OnBoard {TargetsStateModification PacmansPosition 'update' false ID P} }
             
         % killPacman(ID): Inform that the pacman with <pacman> ID has been killed by you
         [] killPacman(ID)|T then
-            % TODO A finir : le virer dans PacmansPosition
-            {TreatStream T GhostId Position OnBoard PacmansPosition}
+            {TreatStream T GhostId Position OnBoard {TargetsStateModification PacmansPosition 'remove' false ID nil} }
 
         % deathPacman(ID): Inform that the pacman with <pacman> ID has been killed (by someone, you or another ghost).
         [] deathPacman(ID)|T then
-            % TODO A finir : le virer dans PacmansPosition
-            {TreatStream T GhostId Position OnBoard PacmansPosition}
+            {TreatStream T GhostId Position OnBoard {TargetsStateModification PacmansPosition 'remove' false ID nil} }
 
         % setMode(M): Inform the new <mode> M
         [] setMode(M)|T then
