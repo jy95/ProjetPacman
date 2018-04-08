@@ -4,10 +4,11 @@ import
    OS
    Number
    Float
+   Value
 export
    allowedMove:AllowedPosition
    sortValidMoves:SortValidMoves
-   bestDirection:BestDirection
+   bestDirectionForGhost:BestDirectionForGhost
 define
    AllowedPosition
    SortValidMoves
@@ -15,7 +16,8 @@ define
    WantedColumn
    WantedElement
    DistanceBetween
-   BestDirection
+   CompareMoves
+   BestDirectionForGhost
 in
    % A way to access the wanted NRow I want
    fun lazy{WantedRow List LineNumber}
@@ -63,24 +65,40 @@ in
    
    % Compute the distance between two positions
    fun{DistanceBetween P1 P2}
-        % ici calcul de l'hypoténus comme heuristic ; pas le cours d'IA ici ^^
+        % ici calcul de l'hypoténus comme heuristic ; aussi appellé Distance de Manhattan ^^
         % racine de (xA − xB)2 + (yA − yB)2
         {Float.sqrt {IntToFloat ({Number.pow (P1.x - P2.x) 2} + {Number.pow (P1.y - P2.y) 2})} }
    end
    
+   % Compare
+   fun{CompareMoves NewMove NewTarget LastMove LastTarget Operator}
+        {Value.Operator {DistanceBetween NewMove NewTarget} {DistanceBetween LastMove LastTarget} }
+   end 
+
    % Compute the best direction to take , based on previous one
    % Inputs : Moves and Target are the current variable
    % Inputs: BestMove and PreviousTarget keep trace of previous work
    % ResultMove and ResultTarget are the final result
-   proc{BestDirection Moves Target BestMove PreviousTarget ResultMove ResultTarget}
+   proc{BestDirectionForGhost Mode Moves Target BestMove PreviousTarget ResultMove ResultTarget}
         case Moves
-            of H|T then 
-            % A more interessting target to hunt
-                if {DistanceBetween Target H} < {DistanceBetween PreviousTarget BestMove} then
-	                {BestDirection T Target H Target ResultMove ResultTarget}
-                else
-	                {BestDirection T Target BestMove PreviousTarget ResultMove ResultTarget}
-                end
+            of H|T then
+                case Mode
+                    of classic then
+                        % A more interessting target to hunt - minimal path
+                        if {CompareMoves Target H BestMove PreviousTarget '<'} then
+	                        {BestDirectionForGhost Mode T Target H Target ResultMove ResultTarget}
+                        else
+	                        {BestDirectionForGhost Mode T Target BestMove PreviousTarget ResultMove ResultTarget}
+                        end
+                    [] hunt then
+                        % run away of killer pacman(s) - maximal path
+                        if {CompareMoves Target H BestMove PreviousTarget '>'} then
+	                        {BestDirectionForGhost Mode T Target H Target ResultMove ResultTarget}
+                        else
+	                        {BestDirectionForGhost Mode T Target BestMove PreviousTarget ResultMove ResultTarget}
+                        end
+                end 
+ 
             [] nil then
                 ResultMove = BestMove
                 ResultTarget = PreviousTarget

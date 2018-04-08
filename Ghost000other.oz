@@ -50,7 +50,7 @@ in
    end
 
    % A determinist way to decide which position should be taken by our ghost
-   fun{ChooseNextPosition PacmansPosition CurrentPosition BestPosition PreviousTarget}
+   fun{ChooseNextPosition Mode PacmansPosition CurrentPosition BestPosition PreviousTarget}
             % X = row et Y = column
             CurrentPositionX = CurrentPosition.x
             CurrentPositionY = CurrentPosition.y
@@ -73,12 +73,16 @@ in
                         LastTarget = PreviousTarget
                     end
                     % Procédure qui va setter les deux variables local pour déterminer le bon choix
-                    {CommonUtils.bestDirection ValidMoves P.position BestPosition LastTarget ResultMove ResultTarget}
-                    % Probablement pas besoin d'un wait sur ResultMove ResultTarget
-                    % Puisque j'ai codé cette partie en determinist dataflow
-                
+                    {CommonUtils.bestDirectionForGhost Mode ValidMoves P.position BestPosition LastTarget 
+                    ResultMove ResultTarget}
+
+                    % histoire d'être sur que les résultats sont bien bound - 
+                    % à voir si c'est pas mieux de le mettre quand T est nil
+                    {Wait ResultMove}
+                    {Wait ResultTarget}
+
                     % Appel récursif avec les nouveaux parametres
-                    {ChooseNextPosition T CurrentPosition ResultMove ResultTarget}
+                    {ChooseNextPosition Mode T CurrentPosition ResultMove ResultTarget}
             end
    end
 
@@ -88,13 +92,13 @@ in
    in
       {NewPort Stream Port}
       thread
-	 {TreatStream Stream ID nil 0 nil}
+	 {TreatStream Stream classic ID nil 0 nil}
       end
       Port
    end
 
 % has as many parameters as you want
-   proc{TreatStream Stream GhostId Position OnBoard PacmansPosition}
+   proc{TreatStream Stream Mode GhostId Position OnBoard PacmansPosition}
 
       case Stream 
         of nil then skip
@@ -102,11 +106,11 @@ in
         % getId(?ID): Ask the ghost for its <ghost> ID.
         [] getId(ID)|T then
             ID = GhostId
-            {TreatStream T GhostId Position OnBoard PacmansPosition}
+            {TreatStream T Mode GhostId Position OnBoard PacmansPosition}
     
         % assignSpawn(P): Assign the <position> P as the spawn of the ghost
         [] assignSpawn(P)|T then
-            {TreatStream T GhostId P OnBoard PacmansPosition}
+            {TreatStream T Mode GhostId P OnBoard PacmansPosition}
 
         % spawn(?ID ?P): Spawn the ghost on the board. The ghost should answer its <ghost> ID and
         % its <position> P (which should be the same as the one assigned as spawn. This action is only
@@ -115,9 +119,9 @@ in
             if OnBoard == 0 then
                 ID =  GhostId
                 P = Position
-                {TreatStream T GhostId Position 1 PacmansPosition}
+                {TreatStream T Mode GhostId Position 1 PacmansPosition}
             else
-                {TreatStream T GhostId Position OnBoard PacmansPosition}
+                {TreatStream T Mode GhostId Position OnBoard PacmansPosition}
             end
 
         % move(?ID ?P): Ask the ghost to chose its next <position> P (ghost is thus aware of its new
@@ -125,40 +129,42 @@ in
         % the pacman is considered on the board, if not, ID and P should be bound to null.
         [] move(ID P)|T then NextPosition in
             if OnBoard == 1 then
-                NextPosition = {ChooseNextPosition PacmansPosition Position Position nil}
+                NextPosition = {ChooseNextPosition Mode PacmansPosition Position Position nil}
+                % Cela prend un peu de temps donc on va attendre la fin avant de setter P 
+                {Wait NextPosition}
                 P = NextPosition
                 ID = GhostId
-                {TreatStream T GhostId NextPosition OnBoard PacmansPosition}
+                {TreatStream T Mode GhostId NextPosition OnBoard PacmansPosition}
             else
                 ID = null
                 P = null
-                {TreatStream T GhostId Position OnBoard PacmansPosition}
+                {TreatStream T Mode GhostId Position OnBoard PacmansPosition}
             end 
 
         % gotKilled(): Inform the ghost that it had been killed and pass it out of the board.
         [] gotKilled()|T then
             % I cleaned the PacmansPosition so that no worry to have later
-            {TreatStream T GhostId Position 0 nil}
+            {TreatStream T Mode GhostId Position 0 nil}
 
         % pacmanPos(ID P): Inform that the pacman with <pacman> ID is now at <position> P.
         [] pacmanPos(ID P)|T then
-            {TreatStream T GhostId Position OnBoard {TargetsStateModification PacmansPosition update(ID P) false} }
+            {TreatStream T Mode GhostId Position OnBoard {TargetsStateModification PacmansPosition update(ID P) false} }
             
         % killPacman(ID): Inform that the pacman with <pacman> ID has been killed by you
         [] killPacman(ID)|T then
-            {TreatStream T GhostId Position OnBoard {TargetsStateModification PacmansPosition remove(ID) false} }
+            {TreatStream T Mode GhostId Position OnBoard {TargetsStateModification PacmansPosition remove(ID) false} }
 
         % deathPacman(ID): Inform that the pacman with <pacman> ID has been killed (by someone, you or another ghost).
         [] deathPacman(ID)|T then
-            {TreatStream T GhostId Position OnBoard {TargetsStateModification PacmansPosition remove(ID) false} }
+            {TreatStream T Mode GhostId Position OnBoard {TargetsStateModification PacmansPosition remove(ID) false} }
 
         % setMode(M): Inform the new <mode> M
         [] setMode(M)|T then
-            % TODO A voir ce qu'on en fait
-            {TreatStream T GhostId Position OnBoard PacmansPosition}
+            {TreatStream T M GhostId Position OnBoard PacmansPosition}
         
         [] M|T then
             {Browser.browse 'unsupported message'#M}
+            {TreatStream T Mode GhostId Position OnBoard PacmansPosition}
 
       end
    end
