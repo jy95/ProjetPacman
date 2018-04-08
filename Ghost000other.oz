@@ -15,35 +15,35 @@ define
 in
    % To handle new pacman or position of current pacman(s)
    % Action : 'update' / 'remove' for the current state ; isDone : if filter/update is already done
-   % ID Position : pacman attributes
+   % ID Position : Action attributes (for update both, for remove only ID)
    % Each element is only present once
-   fun{TargetsStateModification PacmansPosition Action IsDone ID Position}
+   fun{TargetsStateModification PacmansPosition Action IsDone}
         case PacmansPosition
             of nil then
                 case Action
-                    of 'update' then
+                    of update(ID POSITION) then
                         if IsDone then
                             nil
                         else
-                            target(position: Position id: ID)
+                            target(position: POSITION id: ID)
                         end
-                    [] 'remove' then
+                    [] remove(ID) then
                         % Nothing to do on empty list
                         nil
                 end
             [] P|T then
                 case Action
-                    of 'update' then
+                    of update(ID POSITION) then
                         if IsDone == false andthen P.id == ID then
-                            target(position: Position id: ID)|{TargetsStateModification T Action true ID Position}
+                            target(position: POSITION id: ID)|{TargetsStateModification T Action true}
                         else
-                            P|{TargetsStateModification T Action IsDone ID Position}
+                            P|{TargetsStateModification T Action IsDone}
                         end
-                    [] 'remove' then
+                    [] remove(ID) then
                         if IsDone == false andthen P.id == ID then
-                            {TargetsStateModification T Action true ID Position}
+                            {TargetsStateModification T Action true}
                         else
-                            P|{TargetsStateModification T Action IsDone ID Position}
+                            P|{TargetsStateModification T Action IsDone}
                         end
                 end
         end
@@ -88,7 +88,7 @@ in
    in
       {NewPort Stream Port}
       thread
-	 {TreatStream Stream nil nil 0 nil}
+	 {TreatStream Stream ID nil 0 nil}
       end
       Port
    end
@@ -142,15 +142,15 @@ in
 
         % pacmanPos(ID P): Inform that the pacman with <pacman> ID is now at <position> P.
         [] pacmanPos(ID P)|T then
-            {TreatStream T GhostId Position OnBoard {TargetsStateModification PacmansPosition 'update' false ID P} }
+            {TreatStream T GhostId Position OnBoard {TargetsStateModification PacmansPosition update(ID P) false} }
             
         % killPacman(ID): Inform that the pacman with <pacman> ID has been killed by you
         [] killPacman(ID)|T then
-            {TreatStream T GhostId Position OnBoard {TargetsStateModification PacmansPosition 'remove' false ID nil} }
+            {TreatStream T GhostId Position OnBoard {TargetsStateModification PacmansPosition remove(ID) false} }
 
         % deathPacman(ID): Inform that the pacman with <pacman> ID has been killed (by someone, you or another ghost).
         [] deathPacman(ID)|T then
-            {TreatStream T GhostId Position OnBoard {TargetsStateModification PacmansPosition 'remove' false ID nil} }
+            {TreatStream T GhostId Position OnBoard {TargetsStateModification PacmansPosition remove(ID) false} }
 
         % setMode(M): Inform the new <mode> M
         [] setMode(M)|T then
