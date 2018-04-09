@@ -38,7 +38,7 @@ in
    
    % Combine them to got the element I want
    fun lazy{WantedElement X Y}
-      {WantedColumn {WantedRow Input.map X} Y}
+      {WantedColumn {WantedRow Input.map Y} X}
    end
 
    % A way to detect if a position is allowed - boolean type exists :)
