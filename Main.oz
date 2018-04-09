@@ -68,7 +68,7 @@ in
                     {GenerateOrder NbPacmans NbGhosts-1 PacmanList GhostList.2 GhostPlayer|Result}
                 elseif NbGhosts == 0 andthen NbPacmans > 0 then PacmanPlayer PacmanId in
                     % No more ghost but still pacmans left
-                    PacmanId = Input.nbGhost-NbPacmans+1
+                    PacmanId = Input.nbPacman-NbPacmans+1
                     PacmanPlayer = pacman(id: PacmanId port: {PlayerManager.playerGenerator PacmanList.1 PacmanId})
                     {GenerateOrder NbPacmans-1 NbGhosts PacmanList.2 GhostList PacmanPlayer|Result}
                 else
@@ -76,7 +76,7 @@ in
                     RandomNumber = {CommonUtils.randomNumber 0 NbPacmans+NbGhosts}
                     if RandomNumber < NbPacmans then PacmanPlayer PacmanId in
                         % It should be a pacman
-                        PacmanId = Input.nbGhost-NbPacmans+1
+                        PacmanId = Input.nbPacman-NbPacmans+1
                         PacmanPlayer = pacman(id: PacmanId port: {PlayerManager.playerGenerator PacmanList.1 PacmanId})
                         {GenerateOrder NbPacmans-1 NbGhosts PacmanList.2 GhostList PacmanPlayer|Result}
                     else GhostPlayer GhostId in
