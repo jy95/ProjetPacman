@@ -42,13 +42,13 @@ in
    end
 
    % A way to detect if a position is allowed - boolean type exists :)
-   % X rely on NRow , Y on NColumn
+   % X rely on NColumn , Y on NRow
    fun{AllowedPosition Position}
       X = Position.x
       Y = Position.y
    in
       % On sort des limites du double tableau
-      if X =< 0 orelse X > Input.nRow orelse Y =< 0 orelse Y > Input.nColumn then
+      if Y =< 0 orelse Y > Input.nRow orelse X =< 0 orelse X > Input.nColumn then
 	    false
       else
         % On se prend peut être un mur dans la figure 

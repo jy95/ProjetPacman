@@ -49,14 +49,14 @@ in
 
    % A determinist way to decide which position should be taken by our ghost
    fun{ChooseNextPosition Mode PacmansPosition CurrentPosition BestPosition PreviousTarget}
-            % X = row et Y = column
+            % X = column et Y = row
             CurrentPositionX = CurrentPosition.x
             CurrentPositionY = CurrentPosition.y
             % les mouvements possibles
-            Left = pt(x: CurrentPositionX y: CurrentPositionY-1)
-            Right = pt(x: CurrentPositionX y: CurrentPositionY+1)
-            Up = pt(x: CurrentPositionX+1 y: CurrentPositionY)
-            Down = pt(x: CurrentPositionX-1 y: CurrentPositionY)
+            Left = pt(x: CurrentPositionX-1 y: CurrentPositionY)
+            Right = pt(x: CurrentPositionX+1 y: CurrentPositionY)
+            Up = pt(x: CurrentPositionX y: CurrentPositionY-1)
+            Down = pt(x: CurrentPositionX y: CurrentPositionY+1)
             % seulement les mouvement valides
             ValidMoves = {CommonUtils.sortValidMoves [Left Right Up Down] }
         in
