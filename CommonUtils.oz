@@ -9,6 +9,7 @@ export
    allowedMove:AllowedPosition
    sortValidMoves:SortValidMoves
    bestDirectionForGhost:BestDirectionForGhost
+   randomNumber:RandomNumber
 define
    AllowedPosition
    SortValidMoves
@@ -18,7 +19,13 @@ define
    DistanceBetween
    CompareMoves
    BestDirectionForGhost
+   RandomNumber
 in
+   % Generate a random number between I and J
+   fun{RandomNumber I J}
+        (({OS.rand} mod (J-I+1)) + I)
+   end
+
    % A way to access the wanted NRow I want
    fun lazy{WantedRow List LineNumber}
       if LineNumber == 1 then List.1 else {WantedRow List.2 LineNumber-1} end
