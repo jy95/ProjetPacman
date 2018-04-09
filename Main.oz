@@ -29,7 +29,7 @@ in
         case Map
             of nil then nil
             [] H|T then
-                {List.append {ExtractRow H CurrentRow 0} {PositionExtractor T CurrentRow+1}}
+                {Append {ExtractRow H CurrentRow 0} {PositionExtractor T CurrentRow+1}}
         end 
    end
 
