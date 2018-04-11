@@ -54,42 +54,43 @@ in
 
    % Game general behaviour - TurnByTurn
    proc{TurnByTurn PortGUI}
-        fun{GenerateOrder NbPacmans NbGhosts PacmanList GhostList Result}
-            local 
-                RandomNumber 
-            in
-                if PacmanList == nil andthen GhostList == nil then
+        fun{GenerateOrder NbPacmans NbGhosts PacmanList GhostList ColorPacman ColorGhost Result} 
+            RandomNumber
+            Player
+            IdGhost = Input.nbGhost-NbGhosts+1
+            IdPacman = Input.nbPacman-NbPacmans+1
+        in
+            if PacmanList == nil andthen GhostList == nil then
                     % Nothing left : return the result
                     Result
-                elseif NbPacmans == 0 andthen NbGhosts > 0 then GhostPlayer GhostId in
+            elseif NbPacmans == 0 andthen NbGhosts > 0 then GhostPlayer in
                     % No more pacmans but still ghosts left
-                    GhostId = Input.nbGhost-NbGhosts+1
-                    GhostPlayer = ghost(id: GhostId port: {PlayerManager.playerGenerator GhostList.1 GhostId})
-                    {GenerateOrder NbPacmans NbGhosts-1 PacmanList GhostList.2 GhostPlayer|Result}
-                elseif NbGhosts == 0 andthen NbPacmans > 0 then PacmanPlayer PacmanId in
+                    GhostPlayer = ghost(id:IdGhost color:ColorGhost.1 name:GhostList.1)
+                    Player = player(id: GhostPlayer port: {PlayerManager.playerGenerator GhostList.1 GhostPlayer})
+                    {GenerateOrder NbPacmans NbGhosts-1 PacmanList GhostList.2 ColorPacman ColorGhost.2 Player|Result}
+            elseif NbGhosts == 0 andthen NbPacmans > 0 then PacmanPlayer in
                     % No more ghost but still pacmans left
-                    PacmanId = Input.nbPacman-NbPacmans+1
-                    PacmanPlayer = pacman(id: PacmanId port: {PlayerManager.playerGenerator PacmanList.1 PacmanId})
-                    {GenerateOrder NbPacmans-1 NbGhosts PacmanList.2 GhostList PacmanPlayer|Result}
-                else
+                    PacmanPlayer = pacman(id:IdPacman color:ColorPacman.1 name:PacmanList.1)
+                    Player = player(id: PacmanPlayer port: {PlayerManager.playerGenerator PacmanList.1 PacmanPlayer})
+                    {GenerateOrder NbPacmans-1 NbGhosts PacmanList.2 GhostList ColorPacman.2 ColorGhost Player|Result}
+            else
                     % Pick up whatever kind of player randonly
-                    RandomNumber = {CommonUtils.randomNumber 0 NbPacmans+NbGhosts}
-                    if RandomNumber < NbPacmans then PacmanPlayer PacmanId in
-                        % It should be a pacman
-                        PacmanId = Input.nbPacman-NbPacmans+1
-                        PacmanPlayer = pacman(id: PacmanId port: {PlayerManager.playerGenerator PacmanList.1 PacmanId})
-                        {GenerateOrder NbPacmans-1 NbGhosts PacmanList.2 GhostList PacmanPlayer|Result}
-                    else GhostPlayer GhostId in
-                        % It should be a ghost
-                        GhostId = Input.nbGhost-NbGhosts+1
-                        GhostPlayer = ghost(id: GhostId port: {PlayerManager.playerGenerator GhostList.1 GhostId})
-                        {GenerateOrder NbPacmans NbGhosts-1 PacmanList GhostList.2 GhostPlayer|Result}
-                    end
+                RandomNumber = {CommonUtils.randomNumber 0 NbPacmans+NbGhosts}
+                if RandomNumber < NbPacmans then PacmanPlayer in
+                    % It should be a pacman
+                    PacmanPlayer = pacman(id:IdPacman color:ColorPacman.1 name:PacmanList.1)
+                    Player = player(id: PacmanPlayer port: {PlayerManager.playerGenerator PacmanList.1 PacmanPlayer})
+                    {GenerateOrder NbPacmans-1 NbGhosts PacmanList.2 GhostList ColorPacman.2 ColorGhost Player|Result}
+                else GhostPlayer in
+                    % It should be a ghost
+                    GhostPlayer = ghost(id:IdGhost color:ColorGhost.1 name:GhostList.1)
+                    Player = player(id: GhostPlayer port: {PlayerManager.playerGenerator GhostList.1 GhostPlayer})
+                    {GenerateOrder NbPacmans NbGhosts-1 PacmanList GhostList.2 ColorPacman ColorGhost.2 Player|Result}
                 end
             end
         end
         % les pacmans et ghost mélangés selon un ordre random
-        Players = {GenerateOrder Input.nbPacman Input.nbGhost Input.pacman Input.ghost nil}
+        Players = {GenerateOrder Input.nbPacman Input.nbGhost Input.pacman Input.ghost Input.colorPacman Input.colorGhost nil}
         % les lieux de spawn : ghost / pacman / bonus / points
         ExplorerMap = thread {PositionExtractor Input.map 0} end
         GhostSpawn = {FilterTile ExplorerMap fun{$ E} E == 3 end }
