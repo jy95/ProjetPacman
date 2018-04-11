@@ -1,6 +1,7 @@
 functor
 import
    Browser
+   Record
    CommonUtils
 export
    portPlayer:StartPlayer
@@ -25,7 +26,7 @@ in
                         else
                             target(position: POSITION id: ID)
                         end
-                    [] remove(ID) then
+                    [] remove(_) then
                         % Nothing to do on empty list
                         nil
                 end
@@ -129,16 +130,15 @@ in
         % position). It should also give its <ghost> ID back in the message. This action is only done if
         % the pacman is considered on the board, if not, ID and P should be bound to null.
         [] move(ID P)|T then NextPosition in
-            if OnBoard == 1 then CurrentPosition Spawn in
+            if OnBoard == 1 then CurrentPosition in
                 CurrentPosition = PlayerPosition.currentPosition
-                Spawn = PlayerPosition.spawn
                 % On choisit la prochaine destination
                 NextPosition = {ChooseNextPosition Mode PacmansPosition CurrentPosition CurrentPosition nil}
                 % Cela prend un peu de temps donc on va attendre la fin avant de setter P 
                 {Wait NextPosition}
                 P = NextPosition
                 ID = GhostId
-                {TreatStream T Mode GhostId playerPosition(spawn: Spawn currentPosition: NextPosition) 
+                {TreatStream T Mode GhostId {Record.adjoinAt PlayerPosition currentPosition NextPosition}
                 OnBoard PacmansPosition}
             else
                 ID = null
