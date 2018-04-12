@@ -22,7 +22,10 @@ in
   end
 
   proc{TreatStream Stream} % has as many parameters as you want
-     case Stream of ...
+     case Stream 
+      of nil then skip
+      [] H|T then
+        {Browser.browse "Nothing is done right now"}
      end
   end
 end
