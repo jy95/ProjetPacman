@@ -3,3 +3,6 @@
 
 # mozart compilated files (so that future files will not be added)
 .ozf
+
+# the temp folder where is stored the compiled files
+bin
