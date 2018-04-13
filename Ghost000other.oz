@@ -129,17 +129,17 @@ in
         % move(?ID ?P): Ask the ghost to chose its next <position> P (ghost is thus aware of its new
         % position). It should also give its <ghost> ID back in the message. This action is only done if
         % the pacman is considered on the board, if not, ID and P should be bound to null.
-        [] move(ID P)|T then NextPosition in
-            if OnBoard == 1 then CurrentPosition in
+        [] move(ID P)|T then
+            if OnBoard == 1 then CurrentPosition NextPosition NextPlayerPosition in
                 CurrentPosition = PlayerPosition.currentPosition
                 % On choisit la prochaine destination
                 NextPosition = {ChooseNextPosition Mode PacmansPosition CurrentPosition CurrentPosition nil}
                 % Cela prend un peu de temps donc on va attendre la fin avant de setter P 
                 {Wait NextPosition}
+                {Record.adjoinAt PlayerPosition currentPosition NextPosition NextPlayerPosition}
                 P = NextPosition
                 ID = GhostId
-                {TreatStream T Mode GhostId {Record.adjoinAt PlayerPosition currentPosition NextPosition}
-                OnBoard PacmansPosition}
+                {TreatStream T Mode GhostId NextPlayerPosition OnBoard PacmansPosition}
             else
                 ID = null
                 P = null
