@@ -97,6 +97,47 @@ in
         {Record.adjoinAt PointsSpawn {CommonUtils.positionToInt P} false NextPointSpawn}
         {TreatStream T PacmanID Mode OnBoard PlayerState NextPointSpawn BonusSpawn GhostsSpawn}
 
+      % addPoint(Add ?ID ?NewScore): Inform that the pacman has gain the number of points given
+      % in Add, and ask you your <pacman> ID and the NewScore you have.
+      [] addPoint(Add ID NewScore)|T then NextPlayerState in
+        NewScore = PlayerState.currentScore + Add
+        ID = PacmanID
+        {Record.adjoinAt PlayerState currentScore NewScore NextPlayerState}
+        {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn BonusSpawn GhostsSpawn}
+
+      % gotKilled(?ID ?NewLife ?NewScore): Inform that the pacman has lost a life and pass it out
+      % of the board. Ask him its <pacman> ID, its new number of lives in NewLife and its new score
+      % (as you lose point when been killed). This action makes the pacman in a dead state.
+      [] gotKilled(ID NewLife NewScore)|T then NextPlayerState in
+        NewScore = PlayerState.currentScore - Input.penalityKill
+        NewLife = PlayerState.life - 1
+        ID = PacmanID
+        {Record.adjoinList PlayerState [currentScore#NewScore life#NewLife] NextPlayerState}
+        {TreatStream T PacmanID Mode 0 NextPlayerState PointsSpawn BonusSpawn GhostsSpawn}
+      
+      % ghostPos(ID P): Inform that the ghost with <ghost> ID is now at <position> P.
+      [] ghostPos(ID P)|T then NewGhostsSpawn in
+        {Record.adjoinAt PlayerState ID P NewGhostsSpawn}
+        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn NewGhostsSpawn}
+
+      % killGhost(IDg ?IDp ?NewScore): Inform that the ghost with <ghost> IDg has been killed by you. 
+      % Ask you your <pacman> IDp back and your NewScore (since killing a ghost make you gain points).
+      [] killGhost(IDg IDp NewScore)|T then NewGhostsSpawn NextPlayerState in
+        {Record.subtract GhostsSpawn IDg NewGhostsSpawn}
+        NewScore = PlayerState.currentScore + Input.rewardKill
+        IDp = PacmanID
+        {Record.adjoinAt PlayerState currentScore NewScore NextPlayerState}
+        {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn BonusSpawn NewGhostsSpawn}
+
+      % deathGhost(ID): Inform that the ghost with <ghost> ID has been killed (by someone, you or another pacman).
+      [] deathGhost(ID)|T then NewGhostsSpawn in
+        {Record.subtract GhostsSpawn ID NewGhostsSpawn}
+        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn NewGhostsSpawn}
+
+      % setMode(M): Inform the new <mode> M.
+      [] setMode(M)|T then
+        {TreatStream T PacmanID M OnBoard PlayerState PointsSpawn BonusSpawn GhostsSpawn}
+
       [] M|T then
         {Browser.browse 'unsupported message'#M}
         {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn GhostsSpawn}
