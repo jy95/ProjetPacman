@@ -2,9 +2,6 @@ functor
 import
    Input
    OS
-   Number
-   Float
-   Value
 export
    allowedMove:AllowedPosition
    sortValidMoves:SortValidMoves
