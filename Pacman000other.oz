@@ -2,27 +2,96 @@ functor
 import
    Input
    Browser
-   Record
    CommonUtils
 export
    portPlayer:StartPlayer
 define   
    StartPlayer
    TreatStream
-   ExplorerMap
+   ChooseNextPosition
+   BestBonusAvailable
+   ClosestGhost
+   CheckFct
 in
+  % Genericity function : just for checking if a position is in a list
+  fun{CheckFct P}
+    fun{$ X}
+      X == P
+    end
+  end
+
+  % ValidMoves : all the valid moves
+  % Inputs : Points Bonus - the records that contains info for current situation
+  % Inputs : Ghost - the list of positions hold by ghosts 
+  % BestScore BestPosition are temp variable just for treattment
+  fun{BestBonusAvailable ValidMoves Points Bonus Ghosts BestScore BestPosition}
+    case ValidMoves
+      of nil then BestPosition
+      [] P|T then PositionAsInt in
+        PositionAsInt = {CommonUtils.positionToInt P}
+        % If there no ghosts and has reward better than previous one
+        if {List.some Ghosts {CheckFct P} } == false then
+          if {Value.hasFeature Bonus PositionAsInt} andthen Bonus.PositionAsInt == true then
+            % RewardKill car il pourrait killer un ghost après avoir pris ce bonus
+            {BestBonusAvailable T Points Bonus Ghosts Input.rewardKill P}
+          elseif {Value.hasFeature Points PositionAsInt} andthen Points.PositionAsInt == true andthen Input.rewardPoint > BestScore then
+            {BestBonusAvailable T Points Bonus Ghosts Input.rewardPoint P} 
+          else
+            {BestBonusAvailable T Points Bonus Ghosts BestScore BestPosition}
+          end
+        else
+          {BestBonusAvailable T Points Bonus Ghosts BestScore BestPosition}
+        end
+    end
+  end
+
+  fun{ClosestGhost ValidMoves Ghost BestMove}
+    case ValidMoves
+      of nil then BestMove
+      [] P|_ then
+        % On n'utilise uniquement que le premier move autorisé - histoire d'avoir un comportement random
+        P
+    end
+  end
+
+  % A determinist way to decide which position should be taken by our pacman
+  fun{ChooseNextPosition Mode CurrentPosition Points Bonus Ghosts}
+    % X = column et Y = row
+    CurrentPositionX = CurrentPosition.x
+    CurrentPositionY = CurrentPosition.y
+    % les mouvements possibles
+    Left = pt(x: CurrentPositionX-1 y: CurrentPositionY)
+    Right = pt(x: CurrentPositionX+1 y: CurrentPositionY)
+    Up = pt(x: CurrentPositionX y: CurrentPositionY-1)
+    Down = pt(x: CurrentPositionX y: CurrentPositionY+1)
+    % seulement les mouvement valides
+    ValidMoves = {CommonUtils.sortValidMoves [Left Right Up Down] }
+    GhostList
+  in
+    % Retrieve all the positions hold by ghost
+    {Record.toList Ghosts GhostList}
+    case Mode
+      % in classical mode : take the best bonus available if there is no ghost in this
+      of classic then
+        {BestBonusAvailable ValidMoves Points Bonus GhostList 0 CurrentPosition}
+
+      % in hunt mode : simply eat the closest ghost to us
+      [] hunt then
+        {ClosestGhost ValidMoves GhostList CurrentPosition}
+    end
+  end
+
   % ID is a <pacman> ID
-   fun{StartPlayer ID}
+  fun{StartPlayer ID}
       Stream Port
-   in
+  in
       {NewPort Stream Port}
-      ExplorerMap = thread {CommonUtils.positionExtractor Input.map 0} end
       thread
 	 {TreatStream Stream ID classic 0 playerState(life: Input.nbLives currentScore: 0 spawn: nil currentPosition: nil) 
    points() bonus() ghosts()}
       end
       Port
-   end
+  end
   % has as many parameters as you want
    proc{TreatStream Stream PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn GhostsSpawn}
       case Stream 
@@ -63,8 +132,7 @@ in
         if OnBoard == 1 andthen PlayerState.life > 0 then CurrentPosition NextPosition NextPlayerState in
             CurrentPosition = PlayerState.currentPosition
             % On choisit la prochaine destination
-            % TODO à finir ; juste pas enfin aujourd'hui de faire la fonction
-            NextPosition = pt(x: 1 y: 1)
+            NextPosition = {ChooseNextPosition Mode CurrentPosition PointsSpawn BonusSpawn GhostsSpawn}
             % Cela prend un peu de temps donc on va attendre la fin avant de setter P 
             {Wait NextPosition}
             {Record.adjoinAt PlayerState currentPosition NextPosition NextPlayerState}
@@ -117,7 +185,7 @@ in
       
       % ghostPos(ID P): Inform that the ghost with <ghost> ID is now at <position> P.
       [] ghostPos(ID P)|T then NewGhostsSpawn in
-        {Record.adjoinAt PlayerState ID P NewGhostsSpawn}
+        {Record.adjoinAt GhostsSpawn ID P NewGhostsSpawn}
         {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn NewGhostsSpawn}
 
       % killGhost(IDg ?IDp ?NewScore): Inform that the ghost with <ghost> IDg has been killed by you. 

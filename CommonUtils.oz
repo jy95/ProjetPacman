@@ -10,8 +10,6 @@ export
    sortValidMoves:SortValidMoves
    bestDirectionForGhost:BestDirectionForGhost
    randomNumber:RandomNumber
-   positionExtractor:PositionExtractor
-   filterTile:FilterTile
    positionToInt:PositionToInt
 define
    AllowedPosition
@@ -23,8 +21,6 @@ define
    CompareMoves
    BestDirectionForGhost
    RandomNumber
-   PositionExtractor
-   FilterTile
    PositionToInt
 in
    % Generate a random number between I and J
@@ -117,47 +113,6 @@ in
                 ResultTarget = PreviousTarget
         end
     end
-
-    % Explorer each tile of the map to extract information
-    % TODO virer le code doublon dans le main et préférer l'import de cette fonction
-   fun{PositionExtractor Map CurrentRow}
-        fun{ExtractRow List Row Column}
-            case List
-                of nil then nil
-                [] H|T then H#pt(x: Column y: Row)|{ExtractRow T Row Column+1}
-            end
-        end
-        fun {Append Xs Ys}
-            case Xs of nil then Ys
-            [] X|Xr then X|{Append Xr Ys}
-            end
-        end
-   in
-        case Map
-            of nil then nil
-            [] H|T then
-                {Append {ExtractRow H CurrentRow 0} {PositionExtractor T CurrentRow+1}}
-        end 
-   end
-
-   % Filtering tile
-   fun{FilterTile S F}
-        case S
-            of nil then nil
-            [] H|T then
-                case H
-                    of Val#Position then
-                        if thread {F Val} end then
-                            Position|{FilterTile T F}
-                        else
-                            {FilterTile T F}
-                        end
-                    else
-                        % no match
-                        {FilterTile T F}
-                end
-        end
-   end
 
    % A funny-easy way to access more quickly to next element (instead of list loop) 
    % mostly useful for pacman (with its own data structure) so that it could act a little quick that ghost 
