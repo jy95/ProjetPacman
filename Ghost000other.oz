@@ -8,7 +8,36 @@ define
    StartPlayer
    TreatStream
    ChooseNextPosition
+   TargetsStateModification
 in
+   % To handle new pacman or position of current pacman(s)
+   % Action : 'update' / 'remove' for the current state
+   % ID Position : Action attributes (for update both, for remove only ID)
+   % Each element is only present once
+   fun{TargetsStateModification PacmansPosition Action}
+        case Action
+            of update(ID POSITION) then
+                case PacmansPosition
+                    of nil then nil
+                    [] target(id: IG position:_)|T then
+                        if thread IG == ID end then
+                            target(id: ID position: POSITION)|T
+                        else
+                            PacmansPosition.1|{TargetsStateModification T Action}
+                        end
+                end
+            [] remove(ID) then
+                case PacmansPosition
+                    of nil then nil
+                    [] target(id: IG position:_)|T then
+                        if thread IG == ID end then
+                            T
+                        else
+                            PacmansPosition.1|{TargetsStateModification T Action}
+                        end
+                end
+        end
+   end
 
    % A determinist way to decide which position should be taken by our ghost
    fun{ChooseNextPosition Mode PacmansPosition CurrentPosition BestPosition PreviousTarget}
@@ -37,11 +66,6 @@ in
                     {CommonUtils.bestDirectionForGhost Mode ValidMoves P.position BestPosition LastTarget 
                     ResultMove ResultTarget}
 
-                    % histoire d'être sur que les résultats sont bien bound - 
-                    % à voir si c'est pas mieux de le mettre quand T est nil
-                    {Wait ResultMove}
-                    {Wait ResultTarget}
-
                     % Appel récursif avec les nouveaux parametres
                     {ChooseNextPosition Mode T CurrentPosition ResultMove ResultTarget}
             end
@@ -53,7 +77,7 @@ in
    in
       {NewPort Stream Port}
       thread
-	 {TreatStream Stream classic ID playerPosition(spawn: nil currentPosition: nil) 0 ghosts()}
+	 {TreatStream Stream classic ID playerPosition(spawn: nil currentPosition: nil) 0 nil}
       end
       Port
    end
@@ -113,30 +137,31 @@ in
         % gotKilled(): Inform the ghost that it had been killed and pass it out of the board.
         [] gotKilled()|T then
             % I cleaned the PacmansPosition so that no worry to have later
-            {TreatStream T Mode GhostId PlayerPosition 0 pacmans()}
+            {TreatStream T Mode GhostId PlayerPosition 0 nil}
 
         % pacmanPos(ID P): Inform that the pacman with <pacman> ID is now at <position> P.
-        [] pacmanPos(ID P)|T then NewPacmansPosition in
-            {Record.adjoinAt PacmansPosition ID P NewPacmansPosition}
-            {TreatStream T Mode GhostId PlayerPosition OnBoard NewPacmansPosition}
+        [] pacmanPos(ID P)|T then
+            {TreatStream T Mode GhostId PlayerPosition OnBoard 
+            {TargetsStateModification PacmansPosition update(ID P) }}
             
         % killPacman(ID): Inform that the pacman with <pacman> ID has been killed by you
-        [] killPacman(ID)|T then NewPacmansPosition in
-            {Record.subtract PacmansPosition ID NewPacmansPosition}
-            {TreatStream T Mode GhostId PlayerPosition OnBoard NewPacmansPosition }
+        [] killPacman(ID)|T then
+            {TreatStream T Mode GhostId PlayerPosition OnBoard 
+            {TargetsStateModification PacmansPosition remove(ID) } }
 
         % deathPacman(ID): Inform that the pacman with <pacman> ID has been killed (by someone, you or another ghost).
-        [] deathPacman(ID)|T then NewPacmansPosition in
-            {Record.subtract PacmansPosition ID NewPacmansPosition}
-            {TreatStream T Mode GhostId PlayerPosition OnBoard NewPacmansPosition }
+        [] deathPacman(ID)|T then
+            {TreatStream T Mode GhostId PlayerPosition OnBoard 
+            {TargetsStateModification PacmansPosition remove(ID) } }
 
         % setMode(M): Inform the new <mode> M
         [] setMode(M)|T then
             {TreatStream T M GhostId PlayerPosition OnBoard PacmansPosition}
         
-        [] M|T then
-            {Browser.browse 'unsupported message'#M}
-            {TreatStream T Mode GhostId PlayerPosition OnBoard PacmansPosition}
+        % A cause du pattern matching, il passe toujours ici
+        %[] M|T then
+        %    {Browser.browse 'unsupported message'#M}
+        %    {TreatStream T Mode GhostId PlayerPosition OnBoard PacmansPosition}
 
       end
    end

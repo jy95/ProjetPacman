@@ -6,3 +6,10 @@
 
 # the temp folder where is stored the compiled files
 bin
+CommonUtils.ozf
+Ghost000other.ozf
+Input.ozf
+Main.ozf
+Pacman000other.ozf
+PlayerManager.ozf
+GUI.ozf

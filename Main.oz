@@ -8,17 +8,17 @@ import
 define
    WindowPort
    TurnByTurn
-   % custom functions
    PositionExtractor
    FilterTile
    AssignSpawn
    IsAPacman
    InitAllPointsAndBonus
    GeneratePlayers
-   SpawnAllPlayers
    SpawnAllPoints
    SpawnAllBonus
-   % SpawnAllGhosts % TODO à faire
+   SpawnAllGhosts
+   SpawnAllPacmans
+   ForAllProc
 in
    % Detect 
    fun{IsAPacman X}
@@ -27,6 +27,16 @@ in
             true
         else
             false
+    end
+   end
+
+   % List.forAll en concurrence
+   proc{ForAllProc List Proc}
+    case List
+        of nil then skip
+        [] H|T then
+            thread {Proc H} end
+            {ForAllProc T Proc}
     end
    end
 
@@ -162,17 +172,76 @@ in
         case PointsSpawn
             of nil then skip
             [] P|T then
+                % Prevenir le GUI de ce nouveau point
                 {Send PortGUI spawnPoint(P)}
                 % Prévenir les pacmans de ce nouveau point
-                {List.forAll Pacmans {Warn PortGUI P} }
+                thread {ForAllProc Pacmans {Warn PortGUI P} } end
                 {SpawnAllPoints PortGUI T Pacmans}
+        end
+   end
+   proc{SpawnAllGhosts PortGUI Ghosts Pacmans}
+        % Procédure interne pour gérer la portée lexical
+        fun{Warn ID Position}
+            proc{$ X}
+                case X
+                    of player(id:pacman(id:_ color:_ name:_) port: Z) then
+                       {Send Z ghostPos(ID Position)}
+                else
+                    skip
+                end
+            end
+        end  
+    in
+        case Ghosts
+            of nil then skip
+            [] player(id:ID port: G)|T then Position in
+                % obliger le fantome à spawn et à récupérer sa position
+                {Send G spawn(_ Position)}
+
+                % avertir le GUI de sa présence
+                {Send PortGUI spawnGhost(ID Position)}
+
+                % prévenir tous les pacmans de sa présence
+                thread {ForAllProc Pacmans {Warn ID Position}} end
+
+                % les suivants
+                {SpawnAllGhosts PortGUI T Pacmans}
+        end
+   end
+
+   proc{SpawnAllPacmans PortGUI Pacmans Ghosts}
+        % Procédure interne pour gérer la portée lexical
+        fun{Warn ID Position}
+            proc{$ X}
+                case X
+                    of player(id:ghost(id:_ color:_ name:_) port: Z) then
+                       {Send Z pacmanPos(ID Position)}
+                else
+                    skip
+                end
+            end
+        end  
+    in
+        case Pacmans
+            of nil then skip
+            [] player(id:ID port: P)|T then Position in
+                % obliger le pacman à spawn et à récupérer sa position
+                {Send P spawn(_ Position)}
+
+                % avertir le GUI de sa présence
+                {Send PortGUI spawnPacman(ID Position)}
+                % prévenir tous les pacmans de sa présence
+                thread {ForAllProc Ghosts {Warn ID Position}} end
+
+                % les suivants
+                {SpawnAllPacmans PortGUI T Ghosts}
         end
    end
 
    % Spawn all the bonus on GUI and warn all the pacmans
    proc{SpawnAllBonus PortGUI BonusSpawn Pacmans}
         % Procédure interne pour gérer la portée lexical
-        fun{Warn Gui Point}
+        fun{Warn Point}
             proc{$ X}
                 case X
                     of player(id:pacman(id:_ color:_ name:_) port: Z) then
@@ -188,7 +257,7 @@ in
             [] B|T then
                 {Send PortGUI spawnPoint(B)}
                 % Prévenir les pacmans de ce nouveau point
-                {List.forAll Pacmans {Warn PortGUI B} }
+                thread {ForAllProc Pacmans {Warn B} } end
                 {SpawnAllBonus PortGUI T Pacmans}
         end
    end
@@ -227,10 +296,14 @@ in
         {SpawnAllBonus PortGUI BonusSpawn Pacmans}
 
         % Faire apparaitre les joueurs
-        % A finir car il faut prévenir les autres joueurs
-        % {SpawnAllPlayers PortGUI Players}
+        % Spawn ghosts et pacman ne font que prévenir la GUI et les membres de l'autre type leur présence
+        {SpawnAllGhosts PortGUI Ghosts Pacmans}
+        % Cela bugge ici
+        {SpawnAllPacmans PortGUI Pacmans Ghosts}
 
         % Début du jeu
+        % Unit test
+        
 
    end
 

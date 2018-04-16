@@ -206,9 +206,10 @@ in
       [] setMode(M)|T then
         {TreatStream T PacmanID M OnBoard PlayerState PointsSpawn BonusSpawn GhostsSpawn}
 
-      [] M|T then
-        {Browser.browse 'unsupported message'#M}
-        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn GhostsSpawn}
+      % A cause du pattern matching, il passe toujours ici
+      %[] M|T then
+      %  {Browser.browse 'unsupported message from pacman'#M}
+      %  {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn GhostsSpawn}
       end
    end
 end
