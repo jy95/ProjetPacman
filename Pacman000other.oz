@@ -1,7 +1,7 @@
 functor
 import
    Input
-   Browser
+   % Browser
    CommonUtils
 export
    portPlayer:StartPlayer
@@ -12,7 +12,38 @@ define
    BestBonusAvailable
    ClosestGhost
    CheckFct
+   TargetsStateModification
 in
+
+  % To handle new ghost or position of current ghost(s)
+   % Action : 'update' / 'remove' for the current state
+   % ID Position : Action attributes (for update both, for remove only ID)
+   % Each element is only present once
+   fun{TargetsStateModification GhostsPosition Action}
+        case Action
+            of update(ID POSITION) then
+                case GhostsPosition
+                    of nil then nil
+                    [] target(id: IG position:_)|T then
+                        if thread IG == ID end then
+                            target(id: ID position: POSITION)|T
+                        else
+                            GhostsPosition.1|{TargetsStateModification T Action}
+                        end
+                end
+            [] remove(ID) then
+                case GhostsPosition
+                    of nil then nil
+                    [] target(id: IG position:_)|T then
+                        if thread IG == ID end then
+                            T
+                        else
+                            GhostsPosition.1|{TargetsStateModification T Action}
+                        end
+                end
+        end
+   end
+
   % Genericity function : just for checking if a position is in a list
   fun{CheckFct P}
     fun{$ X}
@@ -69,6 +100,7 @@ in
     GhostList
   in
     % Retrieve all the positions hold by ghost
+    % TODO
     {Record.toList Ghosts GhostList}
     case Mode
       % in classical mode : take the best bonus available if there is no ghost in this
@@ -88,7 +120,7 @@ in
       {NewPort Stream Port}
       thread
 	 {TreatStream Stream ID classic 0 playerState(life: Input.nbLives currentScore: 0 spawn: nil currentPosition: nil) 
-   points() bonus() ghosts()}
+   points() bonus() nil}
       end
       Port
   end
@@ -181,26 +213,26 @@ in
         NewLife = PlayerState.life - 1
         ID = PacmanID
         {Record.adjoinList PlayerState [currentScore#NewScore life#NewLife] NextPlayerState}
-        {TreatStream T PacmanID Mode 0 NextPlayerState PointsSpawn BonusSpawn GhostsSpawn}
+        {TreatStream T PacmanID Mode 0 NextPlayerState PointsSpawn BonusSpawn nil}
       
       % ghostPos(ID P): Inform that the ghost with <ghost> ID is now at <position> P.
-      [] ghostPos(ID P)|T then NewGhostsSpawn in
-        {Record.adjoinAt GhostsSpawn ID P NewGhostsSpawn}
-        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn NewGhostsSpawn}
+      [] ghostPos(ID P)|T then
+        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn 
+        {TargetsStateModification GhostsSpawn update(ID P)}}
 
       % killGhost(IDg ?IDp ?NewScore): Inform that the ghost with <ghost> IDg has been killed by you. 
       % Ask you your <pacman> IDp back and your NewScore (since killing a ghost make you gain points).
-      [] killGhost(IDg IDp NewScore)|T then NewGhostsSpawn NextPlayerState in
-        {Record.subtract GhostsSpawn IDg NewGhostsSpawn}
+      [] killGhost(IDg IDp NewScore)|T then NextPlayerState in
         NewScore = PlayerState.currentScore + Input.rewardKill
         IDp = PacmanID
         {Record.adjoinAt PlayerState currentScore NewScore NextPlayerState}
-        {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn BonusSpawn NewGhostsSpawn}
-
+        {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn BonusSpawn 
+        {TargetsStateModification GhostsSpawn remove(IDg )}}
+        
       % deathGhost(ID): Inform that the ghost with <ghost> ID has been killed (by someone, you or another pacman).
-      [] deathGhost(ID)|T then NewGhostsSpawn in
-        {Record.subtract GhostsSpawn ID NewGhostsSpawn}
-        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn NewGhostsSpawn}
+      [] deathGhost(ID)|T then
+        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn 
+        {TargetsStateModification GhostsSpawn remove(ID)}}
 
       % setMode(M): Inform the new <mode> M.
       [] setMode(M)|T then

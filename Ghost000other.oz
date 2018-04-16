@@ -1,6 +1,6 @@
 functor
 import
-   Browser
+   % Browser
    CommonUtils
 export
    portPlayer:StartPlayer
