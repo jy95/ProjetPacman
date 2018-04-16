@@ -19,6 +19,7 @@ define
    SpawnAllGhosts
    SpawnAllPacmans
    ForAllProc
+   InitGame
 in
    % Detect 
    fun{IsAPacman X}
@@ -262,6 +263,40 @@ in
         end
    end
    
+   % Init Game (+ GUI)
+   proc{InitGame PortGUI Data}
+        
+        case Data
+            of data(players: Players 
+                    ghostSpawn: GhostSpawn
+                    pacmanSpawn: PacmanSpawn
+                    pointsSpawn: PointsSpawn
+                    bonusSpawn: BonusSpawn
+                    ghosts: Ghosts
+                    pacmans: Pacmans) then
+                
+                thread
+                % Leur assigner un spawn d'origine
+                {AssignSpawn Players GhostSpawn PacmanSpawn}
+
+                % Init les points sur la GUI
+                {InitAllPointsAndBonus PortGUI PointsSpawn BonusSpawn}
+
+                % Faire apparaitre les points/bonus et en prévenir les pacmans
+                {SpawnAllPoints PortGUI PointsSpawn Pacmans}
+                {SpawnAllBonus PortGUI BonusSpawn Pacmans}
+
+                % Faire apparaitre les joueurs
+                % Spawn ghosts et pacman ne font que prévenir la GUI et les membres de l'autre type leur présence
+                {SpawnAllGhosts PortGUI Ghosts Pacmans}
+                {SpawnAllPacmans PortGUI Pacmans Ghosts}
+
+                end
+        else
+            skip
+        end
+   end
+
    % Spawn all players
    % Peut etre un thread dedans pour les lancer en même temps , pour aussi générer le mode simultané
    % proc{SpawnAllPlayers PortGUI Players}
@@ -284,26 +319,14 @@ in
    in
         % Récupeer dans deux listes les deux types de players - utile pour d'autres méthodes
         {List.partition Players IsAPacman Pacmans Ghosts}
-
-        % Leur assigner un spawn d'origine
-        {AssignSpawn Players GhostSpawn PacmanSpawn}
         
-        % Init les points sur la GUI
-        {InitAllPointsAndBonus PortGUI PointsSpawn BonusSpawn}
+        % Init le jeu
+        {InitGame PortGUI data(players: Players ghostSpawn: GhostSpawn pacmanSpawn: PacmanSpawn
+                                pointsSpawn: PointsSpawn bonusSpawn: BonusSpawn
+                                ghosts: Ghosts pacmans: Pacmans)}
 
-        % Faire apparaitre les points/bonus et en prévenir les pacmans
-        {SpawnAllPoints PortGUI PointsSpawn Pacmans}
-        {SpawnAllBonus PortGUI BonusSpawn Pacmans}
-
-        % Faire apparaitre les joueurs
-        % Spawn ghosts et pacman ne font que prévenir la GUI et les membres de l'autre type leur présence
-        {SpawnAllGhosts PortGUI Ghosts Pacmans}
-        % Cela bugge ici
-        {SpawnAllPacmans PortGUI Pacmans Ghosts}
-
-        % Début du jeu
-        % Unit test
-        
+        % Lancement du tour par tour
+        % TODO
 
    end
 
