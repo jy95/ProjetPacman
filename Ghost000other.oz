@@ -2,6 +2,7 @@ functor
 import
    % Browser
    CommonUtils
+   Input
 export
    portPlayer:StartPlayer
 define   
@@ -125,6 +126,11 @@ in
                 % Cela prend un peu de temps donc on va attendre la fin avant de setter P 
                 {Wait NextPosition}
                 {Record.adjoinAt PlayerPosition currentPosition NextPosition NextPlayerPosition}
+                % si on joue en simultané, il faut attendre un temps random avant de répondre
+                if Input.isTurnByTurn == false then
+                    {Delay {CommonUtils.randomNumber Input.thinkMin Input.thinkMax} }
+                end
+
                 P = NextPosition
                 ID = GhostId
                 {TreatStream T Mode GhostId NextPlayerPosition OnBoard PacmansPosition}

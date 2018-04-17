@@ -47,7 +47,7 @@ in
   % Genericity function : just for checking if a position is in a list
   fun{CheckFct P}
     fun{$ X}
-      X == P
+      X.position == P
     end
   end
 
@@ -97,19 +97,16 @@ in
     Down = pt(x: CurrentPositionX y: CurrentPositionY+1)
     % seulement les mouvement valides
     ValidMoves = {CommonUtils.sortValidMoves [Left Right Up Down] }
-    GhostList
   in
     % Retrieve all the positions hold by ghost
-    % TODO
-    {Record.toList Ghosts GhostList}
     case Mode
       % in classical mode : take the best bonus available if there is no ghost in this
       of classic then
-        {BestBonusAvailable ValidMoves Points Bonus GhostList 0 CurrentPosition}
+        {BestBonusAvailable ValidMoves Points Bonus Ghosts 0 CurrentPosition}
 
       % in hunt mode : simply eat the closest ghost to us
       [] hunt then
-        {ClosestGhost ValidMoves GhostList CurrentPosition}
+        {ClosestGhost ValidMoves Ghosts CurrentPosition}
     end
   end
 
@@ -168,6 +165,12 @@ in
             % Cela prend un peu de temps donc on va attendre la fin avant de setter P 
             {Wait NextPosition}
             {Record.adjoinAt PlayerState currentPosition NextPosition NextPlayerState}
+
+            % si on joue en simultané, il faut attendre un temps random avant de répondre
+            if Input.isTurnByTurn == false then
+              {Delay {CommonUtils.randomNumber Input.thinkMin Input.thinkMax} }
+            end
+
             P = NextPosition
             ID = PacmanID
             {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn BonusSpawn GhostsSpawn}
@@ -227,7 +230,7 @@ in
         IDp = PacmanID
         {Record.adjoinAt PlayerState currentScore NewScore NextPlayerState}
         {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn BonusSpawn 
-        {TargetsStateModification GhostsSpawn remove(IDg )}}
+        {TargetsStateModification GhostsSpawn remove(IDg)}}
         
       % deathGhost(ID): Inform that the ghost with <ghost> ID has been killed (by someone, you or another pacman).
       [] deathGhost(ID)|T then
