@@ -20,6 +20,8 @@ define
    SpawnAllPacmans
    ForAllProc
    InitGame
+   LaunchTurn
+   HandlePlayerTurn % TODO
 in
    % Detect 
    fun{IsAPacman X}
@@ -79,6 +81,133 @@ in
                         {FilterTile T F}
                 end
         end
+   end
+
+   proc{HandlePlayerTurn CurrentPlayer TempState Deaths NewPointsOff NewBonusOff UpdatedState UpdatedDeaths  
+   UpdatedPointsOff UpdatedBonusOff}
+        % TODO
+        skip
+   end
+
+   % Gere le tour par tour
+   % Turn la liste infinie des joueurs
+   % CurrentState : record qui stocke diverses informations du jeu
+    % portGUI : le port sur lequel on envoit les infos destinés au GUI
+    % currentTime : l'heure actuelle (utile seulement pour le jeu en simultané; _ sinon)
+    % bonusTime : l'heure du dernier bonus attrapé , pour gérer le "reset the timing" si on est dans la bonne période.
+    % turnNumber le numéro du tour (utile seulement pour le jeu turnbyturn ; _ sinon)
+    % mode : the current mode
+    % pacmans : tous les pacmans du jeu
+    % ghosts : tous les ghosts du jeu
+    % nbPacmans : le nombre de pacmans encore en vie 
+    % bestPlayer: un <pacman>
+    % bestScore: le meilleur score de ce pacman , pour comparer par la suite
+    % currentPositions : un record avec pour clé les positions occupées (traduit par la fct PositionToInt) les joueurs présents par exemple l( 25: player(id: pacman<> , port: Z)||... ) )
+    % lastPositions : une liste qui contient la dernière position de chaque joueur (par exemple pt(y: 1 x:5)#player(id: <pacman> port: p)|... ) 
+   % Deaths : record qui contient sous les clés suivants "pacmans" et "ghosts" une liste des joueurs tombés au champ de bataille sous le bon mapping
+   % PointsOff : liste des position sur lequel un point a déjà été récupéré . par exemple pt(y: 2 x:7)|...
+   % BonusOff :  liste des position sur lequel un bonus a déjà été récupéré . par exemple pt(y: 2 x:7)|...
+   proc{LaunchTurn Turn CurrentState Deaths PointsOff BonusOff}
+        % fonction qui return un boolean pour savoir s'il faut faire quelque chose
+        fun{CheckTimer TurnNumber ConstraintTime TimeStart}
+            if Input.isTurnByTurn then
+                (TurnNumber mod ConstraintTime) == 0
+            else
+                % Time.time return a number of seconds
+                % Return true if number of seconds to wait to have a new spawn is ok
+                ({Time.time} - TimeStart) >= ConstraintTime
+            end
+        end
+        % les variables common used ici
+        % Pour le check de timer
+        TurnNumber = CurrentState.turnNumber
+        PortGUI  = CurrentState.portGUI
+        CurrentTime = CurrentState.currentTime
+        BonusTime = CurrentState.bonusTime
+        % la liste de tous les joueurs
+        Pacmans = CurrentState.pacmans
+        Ghosts = CurrentState.ghosts
+        % Nouvelles valeurs avant de demander au joueur courant de move
+        NewPointsOff
+        NewBonusOff
+        NewDeadPacmans
+        NewDeadGhosts
+        NewMode
+   in
+        % 0. Est ce qu'il y a encore un pacman en vie
+        if nbPacmans == 0 then
+            {Send PortGUI displayWinner(CurrentState.bestPlayer)}
+        else
+
+            % 1. vérification : les 4 RespawnTime
+            % 1.1 les points
+            if {CheckTimer TurnNumber Input.respawnTimePoint CurrentTime} then
+                {SpawnAllPoints PortGUI PointsOff Pacmans}
+                % Plus de points déjà utilisés
+                NewPointsOff = nil
+            else
+                NewPointsOff = PointsOff
+            end
+        
+            % 1.2 les bonus
+            if {CheckTimer TurnNumber Input.respawnTimeBonus CurrentTime} then
+                {SpawnAllBonus PortGUI BonusOff Pacmans}
+                NewBonusOff = nil
+            else
+                NewBonusOff = BonusOff
+            end
+        
+            % 1.3 les pacmans
+            if {CheckTimer TurnNumber Input.respawnTimePacman CurrentTime} then
+                % TODO une variable qui ne reprendre que les pacmans morts avec life >= +1
+                {SpawnAllPacmans PortGUI Deaths.pacmans Ghosts}
+                NewDeadPacmans = nil
+            else
+                NewDeadPacmans = Deaths.pacmans
+            end
+
+            % 1.4 les ghosts
+            if {CheckTimer TurnNumber Input.respawnTimeGhost CurrentTime} then
+                % TODO une variable qui ne reprendre que les ghosts morts
+                {SpawnAllGhosts PortGUI Deaths.ghosts Pacmans}
+                NewDeadGhosts = nil
+            else
+                NewDeadGhosts = Deaths.ghosts
+            end
+
+            % 2. vérification : le huntTime (si le mode était hunt)
+            if CurrentState.mode == hunt then
+                % TODO prolongement du bonus si un pacman en reprend un durant cette période
+                if {CheckTimer TurnNumber Input.huntTime BonusTime} then
+                    % TODO le setMode qui prévient tout le monde du changement de mode
+                    NewMode = classic
+                else
+                    NewMode = CurrentState.mode
+                end
+            else
+                NewMode = CurrentState.mode
+            end
+
+            % 3. Prendre le premier joueur de la liste
+            case Turn
+                of CurrentPlayer|T then TempState UpdatedState UpdatedDeaths UpdatedPointsOff UpdatedBonusOff in
+                    % Enregistrer dans un record temporaire les eventuels updates
+                    {Record.adjoinAt CurrentState mode NewMode TempState}
+
+                    % Sous traitter la gestion des mouvement dans une autre proc
+                    {HandlePlayerTurn   CurrentPlayer TempState   deaths(pacmans: NewDeadPacmans ghosts: NewDeadGhosts)  
+                                        NewPointsOff    NewBonusOff    UpdatedState UpdatedDeaths 
+                                        UpdatedPointsOff UpdatedBonusOff}
+
+                    % Appel récursif avec les nouvelles variables
+                    {LaunchTurn T UpdatedState UpdatedDeaths UpdatedPointsOff UpdatedBonusOff}
+            else
+                % Jamais le cas en théorie puisque c'est une liste récursive
+                skip
+            end
+
+        end
+
    end
    
    % Initialiaze all the player(s) found in Input.oz
@@ -326,7 +455,20 @@ in
                                 ghosts: Ghosts pacmans: Pacmans)}
 
         % Lancement du tour par tour
-        % TODO
+        {LaunchTurn Turn currentState(
+            portGUI: PortGUI
+            currentTime: {Time.time}
+            bonusTime: _
+            turnNumber: 1
+            mode: classic
+            pacmans: Pacmans
+            ghosts: Ghosts
+            nbPacmans: Input.nbPacman
+            bestPlayer: _
+            bestScore: _
+            currentPositions: occupedPositions()
+            lastPositions: nil
+        ) deaths(ghosts: nil pacmans: nil) nil nil}
 
    end
 
