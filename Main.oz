@@ -4,20 +4,17 @@ import
    Input
    PlayerManager
    Browser
+   % Nos fonctions utilitaires
    CommonUtils
+   % Nos fonctions de warning
+   WarningFunctions
 define
    WindowPort
    TurnByTurn
    PositionExtractor
    FilterTile
-   AssignSpawn
    IsAPacman
-   InitAllPointsAndBonus
    GeneratePlayers
-   SpawnAllPoints
-   SpawnAllBonus
-   SpawnAllGhosts
-   SpawnAllPacmans
    ForAllProc
    InitGame
    LaunchTurn
@@ -127,7 +124,7 @@ in
             % 1. vérification : les 4 RespawnTime
             % 1.1 les points
             if {CheckTimer TurnNumber Input.respawnTimePoint CurrentTime} then
-                {SpawnAllPoints PortGUI PointsOff Pacmans}
+                {WarningFunctions.spawnAllPoints PortGUI PointsOff Pacmans}
                 % Plus de points déjà utilisés
                 NewPointsOff = nil
             else
@@ -136,7 +133,7 @@ in
         
             % 1.2 les bonus
             if {CheckTimer TurnNumber Input.respawnTimeBonus CurrentTime} then
-                {SpawnAllBonus PortGUI BonusOff Pacmans}
+                {WarningFunctions.spawnAllBonus PortGUI BonusOff Pacmans}
                 NewBonusOff = nil
             else
                 NewBonusOff = BonusOff
@@ -145,7 +142,7 @@ in
             % 1.3 les pacmans
             if {CheckTimer TurnNumber Input.respawnTimePacman CurrentTime} then
                 % Warning la variable dpot reprendre que les pacmans morts avec life >= +1
-                {SpawnAllPacmans PortGUI Deaths.pacmans Ghosts}
+                {WarningFunctions.spawnAllPacmans PortGUI Deaths.pacmans Ghosts}
                 NewDeadPacmans = nil
             else
                 NewDeadPacmans = Deaths.pacmans
@@ -154,7 +151,7 @@ in
             % 1.4 les ghosts
             if {CheckTimer TurnNumber Input.respawnTimeGhost CurrentTime} then
                 % TODO une variable qui ne reprendre que les ghosts morts
-                {SpawnAllGhosts PortGUI Deaths.ghosts Pacmans}
+                {WarningFunctions.spawnAllGhosts PortGUI Deaths.ghosts Pacmans}
                 NewDeadGhosts = nil
             else
                 NewDeadGhosts = Deaths.ghosts
@@ -204,13 +201,41 @@ in
     % pointsOff : liste des position sur lequel un point a déjà été récupéré . par exemple pt(y: 2 x:7)|...
     % bonusOff :  liste des position sur lequel un bonus a déjà été récupéré . par exemple pt(y: 2 x:7)|...
    proc{LaunchTurn Turn CurrentState}
+        % le state updaté après le check des timers / bonus mode
         TempState
+        % le state updaté après le move d'un joueur
+        StateAfterMove
+        % le state updaté (uniquement pour gérer la contrainte du turnByTurn)
+        FinalState
+        % savoir si cela vaut la peine de refaire un tour de boucle
         IsFinished
-        % todo peut être en fonction indépendante mais le mode concurrent est légèrement différent
-        % CurrentPlayer : le joueur courant (player(id: <pacman/ghost> port: P) )
-        % Position : la nouvelle position
-        % TempState : l'état courant 
+        % le tour courant
+        CurrentTurnNumber = CurrentState.turnNumber
+        % TODO à voir s'elle peut aussi être utiliser dans le mode concurrent ; pour l'instant je la laisse ici
         proc{HandleMove CurrentPlayer Position TempState StateAfterMove}
+            % le player qu'on traite actuellement
+            UserId = CurrentPlayer.id
+            UserPort = CurrentPlayer.port
+            % les variables utiles dans le traittement - TODO
+            % les nouvelles variables pour updater les changements de state - TODO
+        in
+            % selon le mode
+                % les pacmans/ghosts se font violemment tués par un ghost/pacman
+                % Seul un ghost/pacman peut s'approprier le résultat de ce kill
+            % Si un joueur crève
+                % Si c'est un ghost (cas simple), 
+                    % on avertit les pacmans/GUI + un message gotKilled à la victime
+                    % on l'ajoute à la liste des victimes
+                % Si c'est un pacman (cas complexe) ;
+                    % On prévient les ghost/GUI de sa disparition + un message killPacman au tueur et gotKilled à la victime
+                    % S'il lui reste de la vie >0 , on l'ajoute à la liste des victime (pour éviter sa résurrection)
+            % Cas simple : l'obtention d'un point par un pacman
+                % Si point toujours disponible , le pacman gagne ce point et le point disparait du GUI
+                % Tous les pacmans recoivent les messages pointRemoved
+            % Cas simple : l'obtention d'un bonus par un pacman
+                % Si bonus toujours disponible, le bonusTime est updaté au temps courant
+                    % Si le mode n'était pas déjà en hunt, tout le monde recoit un message setMode
+                    % Les pacmans sont notifiés de sa disparition  
             skip
         end
    in
@@ -218,23 +243,31 @@ in
         {RespawnChecker CurrentState TempState IsFinished}
 
         if IsFinished == true then
+            % TODO trouver le best pacman en les interrogant tous avec addPoint (avec un Add de 0)
             {Send TempState.portGUI displayWinner(TempState.bestPlayer)}
         else
 
             % 3. Prendre le premier joueur de la liste
             case Turn
-                of CurrentPlayer|T then StateAfterMove Position in
+                of CurrentPlayer|T then Position in
                     
-                    {Browser.browse CurrentState}
                     % envoi d'un message move ; ici grâce au CurrentPlayer on a déjà l'ID
                     {Send CurrentPlayer.port move(_ Position)}
 
+                    %{Browser.browse "Player : "#CurrentPlayer.id#" wants to move to "#Position}
+
                     % Sous traitter la gestion des mouvement dans une autre proc
-                    % Update le currentState
                     {HandleMove CurrentPlayer Position TempState StateAfterMove}
 
+                    % Un ieme update de state specifique au turnByTurn : le turnNumber augmente 
+                    % et le currentTime est resetté à l'heure courante
+                    {Record.adjoinList StateAfterMove [
+                        turnNumber#CurrentTurnNumber+1
+                        currentTime#{Time.time}
+                    ] FinalState} 
+
                     % Appel récursif avec les nouvelles variables
-                    {LaunchTurn T StateAfterMove}
+                    {LaunchTurn T FinalState}
             else
                 % Jamais le cas en théorie puisque c'est une liste récursive
                 skip
@@ -285,146 +318,6 @@ in
             end
         end
     end
-   
-   % assignSpawn for all players
-   proc{AssignSpawn Players GhostSpawn PacmanSpawn}
-        case Players
-            of player(id:K port: P)|T then
-                case K
-                    of pacman(id:_ color:_ name:_) then
-                        {Send P assignSpawn(PacmanSpawn.1)}
-                        {AssignSpawn T GhostSpawn PacmanSpawn.2}
-                else
-                    {Send P assignSpawn(GhostSpawn.1)}
-                    {AssignSpawn T GhostSpawn.2 PacmanSpawn}
-                end
-            [] nil then skip
-        end
-   end
-
-   % Initialiaze the GUI
-   % init all the points and bonus
-   proc{InitAllPointsAndBonus PortGUI PointsSpawn BonusSpawn}
-    case PointsSpawn
-        of P|T then
-            {Send PortGUI initPoint(P)}
-            {InitAllPointsAndBonus PortGUI T BonusSpawn}
-        [] nil then
-            case BonusSpawn
-                of B|L then
-                    {Send PortGUI initBonus(B)}
-                    {InitAllPointsAndBonus PortGUI PointsSpawn L}
-                [] nil then skip
-            end
-    end
-   end
-   
-   % Spawn all the points on GUI and warn all the pacmans
-   proc{SpawnAllPoints PortGUI PointsSpawn Pacmans}
-        % Procédure interne pour gérer la portée lexical
-        fun{Warn Gui Point}
-            proc{$ X}
-                case X
-                    of player(id:pacman(id:_ color:_ name:_) port: Z) then
-                        {Send Z pointSpawn(Point)}
-                else
-                    skip
-                end
-            end
-        end
-    in
-        case PointsSpawn
-            of nil then skip
-            [] P|T then
-                % Prevenir le GUI de ce nouveau point
-                {Send PortGUI spawnPoint(P)}
-                % Prévenir les pacmans de ce nouveau point
-                thread {ForAllProc Pacmans {Warn PortGUI P} } end
-                {SpawnAllPoints PortGUI T Pacmans}
-        end
-   end
-   proc{SpawnAllGhosts PortGUI Ghosts Pacmans}
-        % Procédure interne pour gérer la portée lexical
-        fun{Warn ID Position}
-            proc{$ X}
-                case X
-                    of player(id:pacman(id:_ color:_ name:_) port: Z) then
-                       {Send Z ghostPos(ID Position)}
-                else
-                    skip
-                end
-            end
-        end  
-    in
-        case Ghosts
-            of nil then skip
-            [] player(id:ID port: G)|T then Position in
-                % obliger le fantome à spawn et à récupérer sa position
-                {Send G spawn(_ Position)}
-
-                % avertir le GUI de sa présence
-                {Send PortGUI spawnGhost(ID Position)}
-
-                % prévenir tous les pacmans de sa présence
-                thread {ForAllProc Pacmans {Warn ID Position}} end
-
-                % les suivants
-                {SpawnAllGhosts PortGUI T Pacmans}
-        end
-   end
-
-   proc{SpawnAllPacmans PortGUI Pacmans Ghosts}
-        % Procédure interne pour gérer la portée lexical
-        fun{Warn ID Position}
-            proc{$ X}
-                case X
-                    of player(id:ghost(id:_ color:_ name:_) port: Z) then
-                       {Send Z pacmanPos(ID Position)}
-                else
-                    skip
-                end
-            end
-        end  
-    in
-        case Pacmans
-            of nil then skip
-            [] player(id:ID port: P)|T then Position in
-                % obliger le pacman à spawn et à récupérer sa position
-                {Send P spawn(_ Position)}
-
-                % avertir le GUI de sa présence
-                {Send PortGUI spawnPacman(ID Position)}
-                % prévenir tous les pacmans de sa présence
-                thread {ForAllProc Ghosts {Warn ID Position}} end
-
-                % les suivants
-                {SpawnAllPacmans PortGUI T Ghosts}
-        end
-   end
-
-   % Spawn all the bonus on GUI and warn all the pacmans
-   proc{SpawnAllBonus PortGUI BonusSpawn Pacmans}
-        % Procédure interne pour gérer la portée lexical
-        fun{Warn Point}
-            proc{$ X}
-                case X
-                    of player(id:pacman(id:_ color:_ name:_) port: Z) then
-                        {Send Z bonusSpawn(Point)}
-                else
-                    skip
-                end
-            end
-        end
-    in
-        case BonusSpawn
-            of nil then skip
-            [] B|T then
-                {Send PortGUI spawnPoint(B)}
-                % Prévenir les pacmans de ce nouveau point
-                thread {ForAllProc Pacmans {Warn B} } end
-                {SpawnAllBonus PortGUI T Pacmans}
-        end
-   end
    
    % Init Game (+ GUI)
    % Result : un record qui va sauvergarder les positions d'origine
@@ -485,23 +378,23 @@ in
                 
                 thread
                 % Leur assigner un spawn d'origine
-                {AssignSpawn Players GhostSpawn PacmanSpawn}
+                {WarningFunctions.assignSpawn Players GhostSpawn PacmanSpawn}
 
                 % Récupérer les positions assignées de base
                 {RetrieveSpawnPosition Players GhostSpawn PacmanSpawn 
-                positions(currentPositions: positions() spawnPositions: positions(pacmans: nil ghosts: nil) ) DefaultPositions} 
+                positions(currentPositions: nil spawnPositions: positions(pacmans: nil ghosts: nil) ) DefaultPositions} 
 
                 % Init les points sur la GUI
-                {InitAllPointsAndBonus PortGUI PointsSpawn BonusSpawn}
+                {WarningFunctions.initAllPointsAndBonus PortGUI PointsSpawn BonusSpawn}
 
                 % Faire apparaitre les points/bonus et en prévenir les pacmans
-                {SpawnAllPoints PortGUI PointsSpawn Pacmans}
-                {SpawnAllBonus PortGUI BonusSpawn Pacmans}
+                {WarningFunctions.spawnAllPoints PortGUI PointsSpawn Pacmans}
+                {WarningFunctions.spawnAllBonus PortGUI BonusSpawn Pacmans}
 
                 % Faire apparaitre les joueurs
                 % Spawn ghosts et pacman ne font que prévenir la GUI et les membres de l'autre type leur présence
-                {SpawnAllGhosts PortGUI Ghosts Pacmans}
-                {SpawnAllPacmans PortGUI Pacmans Ghosts}
+                {WarningFunctions.spawnAllGhosts PortGUI Ghosts Pacmans}
+                {WarningFunctions.spawnAllPacmans PortGUI Pacmans Ghosts}
 
                 end
         else
@@ -551,9 +444,6 @@ in
             pacmans: Pacmans
             ghosts: Ghosts
             nbPacmans: Input.nbPacman
-            % Pour stocker le meilleur joueur
-            bestPlayer: _
-            bestScore: _
             % les lieux de spawn et les positions courantes
             spawnPositions: DefaultPositions.spawnPositions
             currentPositions: DefaultPositions.currentPositions

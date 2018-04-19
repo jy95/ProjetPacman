@@ -7,7 +7,7 @@ COPY=cp # sur Windows , remplacer par copy
 REMOVE=rm # sur Windows , remplacer par del
 
 # fichiers
-FILES=Input CommonUtils Ghost000other Pacman000other PlayerManager GUI Main
+FILES=Input CommonUtils WarningFunctions Ghost000other Pacman000other PlayerManager GUI Main
 SOURCES=$(FILES:=.oz)
 OBJECTS=$(FILES:=.ozf)
 COMPILED_FOLDER=bin
