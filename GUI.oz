@@ -295,7 +295,7 @@ in
    end
 
    proc{TreatStream Stream Grid Pacmans Ghosts Point Bonus}
-      {Browser.browse Stream.1}
+      %{Browser.browse Stream.1}
       case Stream
       of nil then skip
       [] buildWindow|T then NewGrid in 
