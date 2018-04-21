@@ -18,6 +18,10 @@ define
     GetLastKnownPosition
     FindPlayersOnPosition
     FindOpponents
+    CurrentPositionsWithoutDeathPlayers
+    IsPacmanFinallyDead
+    HandlePacmansDeath
+    HandleGhostDeath
 in
 % Explication sur le state qui gère le jeu: il s'agit d'un record qui stocke diverses informations du jeu :
     % portGUI : le port sur lequel on envoit les infos destinés au GUI
@@ -188,27 +192,41 @@ in
             {FindTupleInList SpawnPosition ID}
         end
     end
+   
+   % Check if dead pacman with 0 life tries to send a move message 
+   fun{IsPacmanFinallyDead Pacman DeathsList}
+    case DeathsList
+        of nil then false
+        [] P|T then
+            if P == Pacman then
+                true
+            else
+                {IsPacmanFinallyDead Pacman T}
+            end
+    end
+   end
 
    % Return the list of alive players
-   fun{GetLastKnownPosition Ghosts Pacmans Deaths CurrentPositions SpawnPosition Result}
+   fun{GetLastKnownPosition Ghosts Pacmans Deaths AlreadyDeathPacmans CurrentPositions SpawnPosition Result}
     case Ghosts
         of G|T then
             if {IsStillAlive Deaths.ghosts G} then
-                {GetLastKnownPosition T Pacmans Deaths CurrentPositions SpawnPosition {
+                {GetLastKnownPosition T Pacmans Deaths AlreadyDeathPacmans CurrentPositions SpawnPosition {
                     GetLastKnownPositionForPlayer G CurrentPositions SpawnPosition
                 }|Result}
             else
-                {GetLastKnownPosition T Pacmans Deaths CurrentPositions SpawnPosition Result}
+                {GetLastKnownPosition T Pacmans Deaths AlreadyDeathPacmans CurrentPositions SpawnPosition Result}
             end
         [] nil then
             case Pacmans
                 of P|L then
-                    if {IsStillAlive Deaths.pacmans P} then
-                        {GetLastKnownPosition Ghosts L Deaths CurrentPositions SpawnPosition {
+                    % Todo empecher un vieux pacman avec life 0 de s'y trouver
+                    if {IsStillAlive Deaths.pacmans P} andthen {IsPacmanFinallyDead P AlreadyDeathPacmans} == false then
+                        {GetLastKnownPosition Ghosts L Deaths AlreadyDeathPacmans CurrentPositions SpawnPosition {
                             GetLastKnownPositionForPlayer P CurrentPositions SpawnPosition
                         }|Result}
                     else
-                        {GetLastKnownPosition Ghosts L Deaths CurrentPositions SpawnPosition Result}
+                        {GetLastKnownPosition Ghosts L Deaths AlreadyDeathPacmans CurrentPositions SpawnPosition Result}
                     end
                 [] nil then
                     Result
@@ -249,16 +267,82 @@ in
             end
     end
    end
+   
+   % Remove the death player from currentPositions
+   fun{CurrentPositionsWithoutDeathPlayers CurrentPositions DeathsList}
+    case CurrentPositions
+        of nil then nil
+        [] _#Player|T then
+            % Ce joueur doit être viré
+            if {List.some DeathsList fun{$ X} X == Player end} then
+                {CurrentPositionsWithoutDeathPlayers T DeathsList}
+            else
+                CurrentPositions.1|{CurrentPositionsWithoutDeathPlayers T DeathsList}
+            end
+    end
+   end
 
-   % TODO A finir
+   % Handle dead pacman(s) by ghost Killer
+   % Killer : the ghost that kills a/many pacman(s)
+   % Ghosts and Pacamns : All the players that should be aware of this event
+   % NotDeadPacmans and PacmansFinallyDead : temp variables just for treatement
+   % Victims and PacmansNotDead : the result (just like List.partition)
+   proc{HandlePacmansDeath PortGUI Killer Ghosts Pacmans NotDeadPacmans PacmansFinallyDead Victims PacmansNotDead}
+    case Pacmans
+        of nil then 
+            Victims = PacmansFinallyDead
+            PacmansNotDead = NotDeadPacmans
+        [] P|T then CurrentLife in
+            % On prévient le tueur 
+            {Send Killer.port killPacman(P.id)}
+
+            % TODO - On prévient les ghosts de la mort du pacman - deathPacman(ID)
+            % cette ligne c'est pour tester sur la GUI mais tu devrais utiliser une des warning function dont je parlais
+            {Send PortGUI hidePacman(P.id)}
+
+            % On prévient la victime
+            {Send P.port gotKilled(_ CurrentLife _)}
+            
+            % Ce joueur va définitivement être viré
+            if CurrentLife == 0 then
+                {HandlePacmansDeath PortGUI Killer Ghosts T NotDeadPacmans P|PacmansFinallyDead Victims PacmansNotDead}
+            else
+                {HandlePacmansDeath PortGUI Killer Ghosts T P|NotDeadPacmans PacmansFinallyDead Victims PacmansNotDead}
+            end
+    end
+   end
+   
+   % Un peu comme HandlePacmansDeath sauf que c'est fait pour gérer des ghosts par un pacman
+   proc{HandleGhostDeath PortGUI Killer PacmansList Pacmans}
+    case PacmansList
+        of nil then skip
+        [] G|T then
+            % On prévient le tueur  killGhost(IDg ?IDp ?NewScore):
+            {Send Killer.port killGhost(G.id _ _)}
+
+            % TODO - On prévient les pacmans de la mort du ghost - deathGhost(ID)
+            % cette ligne c'est pour tester sur la GUI mais tu devrais utiliser une des warning function dont je parlais
+            {Send PortGUI hideGhost(G.id)}
+
+            % On prévient la victime
+            {Send G.port gotKilled()}
+            
+            % La victime suivante
+            {HandleGhostDeath PortGUI Killer T Pacmans}
+    end
+   end
+
    proc{HandleMove CurrentPlayer Position TempState StateAfterMove}
         % le player qu'on traite actuellement
-        UserId = CurrentPlayer.id
         UserPort = CurrentPlayer.port
+        UserId = CurrentPlayer.id
+        PortGUI = TempState.portGUI
         % Savoir s'il s'agit d'un pacman ; true si c'est le cas
         CheckPacmanType = {IsAPacman CurrentPlayer}
         % all the dead players
         Deaths = TempState.deaths
+        % all the finally known deaths pacmans
+        FinallyDeathPacmans = TempState.pacmansWithNoLife
         % La liste des morts à vérifier - (eh oui possible d'assigner une variable de cette facon)
         CheckDeathList = if CheckPacmanType then Deaths.pacmans else Deaths.ghosts end
         % Les pacmans/ghosts de la partie
@@ -267,15 +351,13 @@ in
         % La position courante de tous les joueurs
         LastKnownPosition = TempState.currentPositions
         SpawnPosition = TempState.spawnPositions
-        CurrentPositions = {GetLastKnownPosition Ghosts Pacmans Deaths LastKnownPosition SpawnPosition nil}
+        CurrentPositions = {GetLastKnownPosition Ghosts Pacmans Deaths FinallyDeathPacmans LastKnownPosition SpawnPosition nil}
         % Tous les autres joueurs sur la position passée en paramètre (en supposant bien sur que notre joueur y est pas (encore) 
         PlayersOnThisPosition = {FindPlayersOnPosition CurrentPositions Position}
         % Les joueurs de type opposés au notre
         OpponentList = {FindOpponents PlayersOnThisPosition CheckPacmanType}
         % savoir si le pacman pourra récupérer le point/bonus si toujours en vie
         StillAvailable
-        % La liste de tous les joueurs ; utile pour les fonctions de notitication
-        AllPlayers = {List.append Ghosts Pacmans}
         % les variables pour checker le gain de points/bonus
         PointsOff = TempState.pointsOff
         PointsSpawn = TempState.pointsSpawn
@@ -284,26 +366,130 @@ in
         % Les nouvelles variables pour l'update du state
         NewPointsOff
         NewBonusOff
-        NewCurrentPosition
+        NewCurrentPositions
         NewBonusTime
         NewMode
+        % gérer les morts
+        NewNbPacmans
+        NewDeadGhosts
+        NewDeadPacmans
+        NewFinallyDeathPacmans
     in
         % Si le joueur est mort entretemps après son message , il ne peut plus agir
-        if {IsStillAlive CheckDeathList CurrentPlayer} == false then
+        % Petit check supplémentaire : empecher un pacman mort de "tricher" (s'il n'a plus de vie)
+        if {IsStillAlive CheckDeathList CurrentPlayer} == false orelse {IsPacmanFinallyDead CurrentPlayer FinallyDeathPacmans} then
             % On skip son tour - aucun changement d'état
             StateAfterMove = TempState
         else
-            % Pour tester les collisions
+            % On bouge en prévention le ghost/pacman
+            if CheckPacmanType then
+                {Send PortGUI movePacman(UserId Position)}
+            else
+                {Send PortGUI moveGhost(UserId Position)}
+            end
+
+            % S'il y n'a pas des ennemis, on peut enregistrer sa position sans soucis
             if OpponentList == nil then
                 StillAvailable = true
+                NewFinallyDeathPacmans = FinallyDeathPacmans
+                NewDeadGhosts = Deaths.ghosts
+                NewDeadPacmans = Deaths.pacmans
+                NewNbPacmans = TempState.nbPacmans
+                % sa nouvelle position
+                NewCurrentPositions = {List.append Position#CurrentPlayer|nil 
+                                        {CurrentPositionsWithoutDeathPlayers LastKnownPosition CurrentPlayer|nil} }
+
             else
                 % Selon le mode et notre type, on se fait tuer par le premier ennemi ou on tue tout le monde
-                if TempState.mode == classic then
-                    skip
-                else
-                    skip
-                end
+                if TempState.mode == classic then Victims PacmansNotDead in
+                    % En mode normal, Le pacman se fait tuer par le premier ghost
+                    if CheckPacmanType then KillerPlayer in
+                        KillerPlayer = OpponentList.1
 
+                        % sous traitter les warnings aux joueurs concernées
+                        {HandlePacmansDeath PortGUI KillerPlayer Ghosts CurrentPlayer|nil nil nil Victims PacmansNotDead}
+
+                        % on le vire des positions courantes
+                        NewCurrentPositions = {CurrentPositionsWithoutDeathPlayers LastKnownPosition CurrentPlayer|nil}
+
+                        % On décrémente le nombre de pacmans selon le nombre d'éléments dans Victims
+                        NewNbPacmans = TempState.nbPacmans - {List.length Victims}
+
+                        % On rajoute cette nouvelles victime aux précédentes
+                        NewFinallyDeathPacmans = {List.append FinallyDeathPacmans Victims}
+
+                        % Les joueurs avec encore de la vie sont rajoutés
+                        NewDeadPacmans = {List.append Deaths.pacmans PacmansNotDead}
+
+                        % Aucun mort à rajouter du côté des ghots)
+                        NewDeadGhosts = Deaths.ghosts
+
+                        % Ce pacman ne peut plus agir
+                        StillAvailable=false
+
+                    % Le ghost tue tout les pacmans sur son chemin
+                    else
+
+                        % sous traitter les warnings aux joueurs concernées
+                        {HandlePacmansDeath PortGUI CurrentPlayer Ghosts OpponentList nil nil Victims PacmansNotDead}
+
+                        % on le vire des positions courantes
+                        NewCurrentPositions = {CurrentPositionsWithoutDeathPlayers LastKnownPosition OpponentList}
+
+                        % On décrémente le nombre de pacmans selon le nombre d'éléments dans Victims
+                        NewNbPacmans = TempState.nbPacmans - {List.length Victims}
+
+                        % On rajoute cette nouvelles victime aux précédentes
+                        NewFinallyDeathPacmans = {List.append FinallyDeathPacmans Victims}
+
+                        % Les joueurs avec encore de la vie sont rajoutés
+                        NewDeadPacmans = {List.append Deaths.pacmans PacmansNotDead}
+
+                        % Aucun mort à rajouter du côté des ghots)
+                        NewDeadGhosts = Deaths.ghosts
+
+                        % Ce ghost peut agir mais CheckPacmanType= false
+                        StillAvailable=true
+                        
+                    end
+                else
+                    % En mode bonus, le nombre de pacmans reste le même
+                    NewNbPacmans = TempState.nbPacmans
+                    NewDeadPacmans = Deaths.pacmans
+                    NewFinallyDeathPacmans = FinallyDeathPacmans
+
+                    % Le pacman tue tout les ghosts
+                    if CheckPacmanType then 
+                        
+                        % sous traitter les warnings aux joueurs concernées
+                        {HandleGhostDeath PortGUI CurrentPlayer OpponentList Pacmans}
+
+                        % on le vire des positions courantes
+                        NewCurrentPositions = {CurrentPositionsWithoutDeathPlayers LastKnownPosition OpponentList}
+
+                        % Des morts à rajouter du côté des ghots
+                        NewDeadGhosts = {List.append Deaths.ghosts OpponentList}
+
+                        % Ce pacman peut agir mais CheckPacmanType= false
+                        StillAvailable=true
+
+                    % Le ghost se fait tuer par le premier pacman
+                    else 
+                        
+                        % sous traitter les warnings aux joueurs concernées
+                        {HandleGhostDeath PortGUI OpponentList.1 CurrentPlayer|nil Pacmans}
+
+                        % on le vire des positions courantes
+                        NewCurrentPositions = {CurrentPositionsWithoutDeathPlayers LastKnownPosition CurrentPlayer|nil}
+
+                        % Des morts à rajouter du côté des ghots
+                        NewDeadGhosts = {List.append Deaths.ghosts CurrentPlayer|nil}
+
+                        % Ce pacman ne peut plus agir
+                        StillAvailable=false
+                        
+                    end
+                end
             end
 
             % Pour gérer les gains
@@ -317,8 +503,10 @@ in
                     % TODO Prévenir tous les joueurs que le point a disparu
 
                     % mettre cette position comme off
-                    NewPointsOff = PointsOff|Position
+                    NewPointsOff = Position|PointsOff
+                    NewBonusOff = BonusOff
                     NewBonusTime = TempState.bonusTime
+                    NewMode = TempState.mode
 
                 % On prend un bonus
                 elseif {List.some BonusOff fun{$ X} X == Position end } == false andthen
@@ -327,7 +515,9 @@ in
                     % TODO prévenir tous les joueurs du changement de mode
 
                     % mettre cette position comme off
-                    NewBonusOff = NewBonusOff|Position
+                    NewMode = hunt
+                    NewBonusOff =  Position|BonusOff
+                    NewPointsOff = PointsOff
                     NewBonusTime = {Time.time}
                     
                 % Rien du tout , on garde les mêmes variables
@@ -335,6 +525,7 @@ in
                     NewPointsOff = PointsOff
                     NewBonusOff = BonusOff
                     NewBonusTime = TempState.bonusTime
+                    NewMode = TempState.mode
                 end
             end
 
@@ -346,6 +537,11 @@ in
                 pointsOff#NewPointsOff
                 bonusOff#NewBonusOff
                 bonusTime#NewBonusTime
+                currentPositions#NewCurrentPositions
+                deaths#deaths(pacmans: NewDeadPacmans ghosts: NewDeadGhosts)
+                pacmansWithNoLife#NewFinallyDeathPacmans
+                nbPacmans#NewNbPacmans
+                mode#NewMode
              ] StateAfterMove}
         end
     end
@@ -388,6 +584,7 @@ in
             {TreatStream T StateAfterMove}
         
         [] M|T then
+            {Browser.browse 'Unsupported Message'#M}
             {TreatStream T State}
     end
   end

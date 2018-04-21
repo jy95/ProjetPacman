@@ -291,7 +291,8 @@ in
             spawnPositions: DefaultPositions.spawnPositions
             currentPositions: DefaultPositions.currentPositions
             % Stockage des morts respectifs
-            deaths: deaths(ghosts: nil pacmans: nil)
+            deaths: deaths(ghosts: nil pacmans: nil) % Pour gérer les morts habituels dans le jeux
+            pacmansWithNoLife: nil % pour exclure définitivement un pacman de jouer un prochain move
             % les points/bonus déjà consommés (une liste)
             pointsOff: nil
             bonusOff: nil
