@@ -11,6 +11,13 @@ define
     RespawnChecker
     TreatStream
     HandleMove
+    IsStillAlive
+    IsAPacman
+    FindTupleInList
+    GetLastKnownPositionForPlayer
+    GetLastKnownPosition
+    FindPlayersOnPosition
+    FindOpponents
 in
 % Explication sur le state qui gère le jeu: il s'agit d'un record qui stocke diverses informations du jeu :
     % portGUI : le port sur lequel on envoit les infos destinés au GUI
@@ -21,10 +28,8 @@ in
     % pacmans : tous les pacmans du jeu
     % ghosts : tous les ghosts du jeu
     % nbPacmans : le nombre de pacmans encore en vie 
-    % bestPlayer: un <pacman>
-    % bestScore: le meilleur score de ce pacman , pour comparer par la suite
-    % currentPositions : un record avec pour clé les positions occupées (traduit par la fct PositionToInt) les joueurs présents par exemple l( 25: player(id: pacman<> , port: Z)||... ) )
-    % lastPositions : une liste qui contient la dernière position de chaque joueur (par exemple pt(y: 1 x:5)#player(id: <pacman> port: p)|... ) 
+    % spawnPositions : juste une manière de vérifier après respawn que le joueur se fait tuer
+    % currentPositions : une liste qui contient la dernière position de chaque joueur (par exemple pt(y: 1 x:5)#player(id: <pacman> port: p)|... ) 
     % deaths : record qui contient sous les clés suivants "pacmans" et "ghosts" une liste des joueurs tombés au champ de bataille sous le bon mapping
     % pointsOff : liste des position sur lequel un point a déjà été récupéré . par exemple pt(y: 2 x:7)|...
     % bonusOff :  liste des position sur lequel un bonus a déjà été récupéré . par exemple pt(y: 2 x:7)|...
@@ -138,32 +143,211 @@ in
       Port
   end
    
+   % Function that will check if the asked pacman/ghost is not already dead 
+   fun{IsStillAlive CheckList Asker}
+    case CheckList
+        of nil then true
+        [] H|T then
+            if H == Asker then false else {IsStillAlive T Asker} end
+    end
+   end
+
+   % Detect 
+   fun{IsAPacman X}
+    case X
+        of player(id:pacman(id:_ color:_ name:_) port: _) then
+            true
+        else
+            false
+    end
+   end
+   
+   % Returns the tuple Position#ID ; null if not found
+   fun{FindTupleInList SearchList Player}
+    case SearchList
+        of nil then null
+        [] _#player(id: FoundID port: _)|T then
+            if Player.id == FoundID then
+                SearchList.1
+            else
+                {FindTupleInList T Player}
+            end
+    end
+   end
+
+   % Return for an alive player it last position
+   % So currentPosition if already moved
+   % or spawnPosition if just revived
+    fun{GetLastKnownPositionForPlayer ID CurrentPositions SpawnPosition}
+        TempResult = {FindTupleInList CurrentPositions ID}
+    in
+        if TempResult \= null then
+            TempResult
+        else
+            % On suppose que le joueur est toujours en vie donc à son lieu de spawn
+            {FindTupleInList SpawnPosition ID}
+        end
+    end
+
+   % Return the list of alive players
+   fun{GetLastKnownPosition Ghosts Pacmans Deaths CurrentPositions SpawnPosition Result}
+    case Ghosts
+        of G|T then
+            if {IsStillAlive Deaths.ghosts G} then
+                {GetLastKnownPosition T Pacmans Deaths CurrentPositions SpawnPosition {
+                    GetLastKnownPositionForPlayer G CurrentPositions SpawnPosition
+                }|Result}
+            else
+                {GetLastKnownPosition T Pacmans Deaths CurrentPositions SpawnPosition Result}
+            end
+        [] nil then
+            case Pacmans
+                of P|L then
+                    if {IsStillAlive Deaths.pacmans P} then
+                        {GetLastKnownPosition Ghosts L Deaths CurrentPositions SpawnPosition {
+                            GetLastKnownPositionForPlayer P CurrentPositions SpawnPosition
+                        }|Result}
+                    else
+                        {GetLastKnownPosition Ghosts L Deaths CurrentPositions SpawnPosition Result}
+                    end
+                [] nil then
+                    Result
+            end
+    end
+   end
+
+   fun{FindPlayersOnPosition CurrentPositions Position}
+    case CurrentPositions
+        of nil then nil
+        [] P#_|T then
+            if P == Position then
+                CurrentPositions.1.2|{FindPlayersOnPosition T Position}
+            else
+                {FindPlayersOnPosition T Position}
+            end
+    end
+   end
+
+   fun{FindOpponents PlayerList CheckIsAPacman}
+    case PlayerList
+        of nil then nil
+        [] P|T then
+            % On est un pacman , donc on doit trouver des ghosts
+            if CheckIsAPacman then
+                if {IsAPacman P } then
+                    {FindOpponents T CheckIsAPacman}
+                else
+                    P|{FindOpponents T CheckIsAPacman}
+                end
+            % On est un ghost , donc on doit trouver des pacmans
+            else
+                if {IsAPacman P } then
+                    P|{FindOpponents T CheckIsAPacman}
+                else
+                    {FindOpponents T CheckIsAPacman}
+                end
+            end
+    end
+   end
+
    % TODO A finir
    proc{HandleMove CurrentPlayer Position TempState StateAfterMove}
-            % le player qu'on traite actuellement
-            UserId = CurrentPlayer.id
-            UserPort = CurrentPlayer.port
-            % les variables utiles dans le traittement - TODO
-            % les nouvelles variables pour updater les changements de state - TODO
+        % le player qu'on traite actuellement
+        UserId = CurrentPlayer.id
+        UserPort = CurrentPlayer.port
+        % Savoir s'il s'agit d'un pacman ; true si c'est le cas
+        CheckPacmanType = {IsAPacman CurrentPlayer}
+        % all the dead players
+        Deaths = TempState.deaths
+        % La liste des morts à vérifier - (eh oui possible d'assigner une variable de cette facon)
+        CheckDeathList = if CheckPacmanType then Deaths.pacmans else Deaths.ghosts end
+        % Les pacmans/ghosts de la partie
+        Ghosts = TempState.ghosts
+        Pacmans = TempState.pacmans
+        % La position courante de tous les joueurs
+        LastKnownPosition = TempState.currentPositions
+        SpawnPosition = TempState.spawnPositions
+        CurrentPositions = {GetLastKnownPosition Ghosts Pacmans Deaths LastKnownPosition SpawnPosition nil}
+        % Tous les autres joueurs sur la position passée en paramètre (en supposant bien sur que notre joueur y est pas (encore) 
+        PlayersOnThisPosition = {FindPlayersOnPosition CurrentPositions Position}
+        % Les joueurs de type opposés au notre
+        OpponentList = {FindOpponents PlayersOnThisPosition CheckPacmanType}
+        % savoir si le pacman pourra récupérer le point/bonus si toujours en vie
+        StillAvailable
+        % La liste de tous les joueurs ; utile pour les fonctions de notitication
+        AllPlayers = {List.append Ghosts Pacmans}
+        % les variables pour checker le gain de points/bonus
+        PointsOff = TempState.pointsOff
+        PointsSpawn = TempState.pointsSpawn
+        BonusOff = TempState.bonusOff
+        BonusSpawn = TempState.bonusSpawn
+        % Les nouvelles variables pour l'update du state
+        NewPointsOff
+        NewBonusOff
+        NewCurrentPosition
+        NewBonusTime
+        NewMode
     in
-            % selon le mode
-                % les pacmans/ghosts se font violemment tués par un ghost/pacman
-                % Seul un ghost/pacman peut s'approprier le résultat de ce kill
-            % Si un joueur crève
-                % Si c'est un ghost (cas simple), 
-                    % on avertit les pacmans/GUI + un message gotKilled à la victime
-                    % on l'ajoute à la liste des victimes
-                % Si c'est un pacman (cas complexe) ;
-                    % On prévient les ghost/GUI de sa disparition + un message killPacman au tueur et gotKilled à la victime
-                    % S'il lui reste de la vie >0 , on l'ajoute à la liste des victime (pour éviter sa résurrection)
-            % Cas simple : l'obtention d'un point par un pacman
-                % Si point toujours disponible , le pacman gagne ce point et le point disparait du GUI
-                % Tous les pacmans recoivent les messages pointRemoved
-            % Cas simple : l'obtention d'un bonus par un pacman
-                % Si bonus toujours disponible, le bonusTime est updaté au temps courant
-                    % Si le mode n'était pas déjà en hunt, tout le monde recoit un message setMode
-                    % Les pacmans sont notifiés de sa disparition  
-            skip
+        % Si le joueur est mort entretemps après son message , il ne peut plus agir
+        if {IsStillAlive CheckDeathList CurrentPlayer} == false then
+            % On skip son tour - aucun changement d'état
+            StateAfterMove = TempState
+        else
+            % Pour tester les collisions
+            if OpponentList == nil then
+                StillAvailable = true
+            else
+                % Selon le mode et notre type, on se fait tuer par le premier ennemi ou on tue tout le monde
+                if TempState.mode == classic then
+                    skip
+                else
+                    skip
+                end
+
+            end
+
+            % Pour gérer les gains
+            if StillAvailable andthen CheckPacmanType then
+                % Sauvergarde la nouvelle position
+                % On prend un point
+                if {List.some PointsOff fun{$ X} X == Position end } == false andthen
+                       {List.some PointsSpawn fun{$ X} X == Position end } then
+                    % Prévenir que le joueur a gagné un point
+                    {Send UserPort addPoint(Input.rewardPoint _ _)}
+                    % TODO Prévenir tous les joueurs que le point a disparu
+
+                    % mettre cette position comme off
+                    NewPointsOff = PointsOff|Position
+                    NewBonusTime = TempState.bonusTime
+
+                % On prend un bonus
+                elseif {List.some BonusOff fun{$ X} X == Position end } == false andthen
+                            {List.some BonusSpawn fun{$ X} X == Position end } then
+                    
+                    % TODO prévenir tous les joueurs du changement de mode
+
+                    % mettre cette position comme off
+                    NewBonusOff = NewBonusOff|Position
+                    NewBonusTime = {Time.time}
+                    
+                % Rien du tout , on garde les mêmes variables
+                else
+                    NewPointsOff = PointsOff
+                    NewBonusOff = BonusOff
+                    NewBonusTime = TempState.bonusTime
+                end
+            end
+
+            % Pour débug
+            %{Delay 250000000}
+            
+            % Update du final state
+             {Record.adjoinList TempState [
+                pointsOff#NewPointsOff
+                bonusOff#NewBonusOff
+                bonusTime#NewBonusTime
+             ] StateAfterMove}
+        end
     end
 
   proc{TreatStream Stream State}
@@ -199,9 +383,9 @@ in
             {TreatStream T FinalState}
         
         % Gére le mouvement d'un player
-        [] move(CurrentPlayer ID Position)|T then
-            % TODO ; c'est HandleMove qui doit le faire
-            {TreatStream T State}
+        [] move(CurrentPlayer Position)|T then StateAfterMove in
+            {HandleMove CurrentPlayer Position State StateAfterMove}
+            {TreatStream T StateAfterMove}
         
         [] M|T then
             {TreatStream T State}

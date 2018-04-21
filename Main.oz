@@ -96,17 +96,15 @@ in
         else
             % 3. Prendre le premier joueur de la liste
             case Turn
-                of CurrentPlayer|T then Position ID in
+                of CurrentPlayer|T then Position in
                     
                     % envoi d'un message move ; ici grâce au CurrentPlayer on a déjà l'ID
-                    {Send CurrentPlayer.port move(ID Position)}
-
-                    {Browser.browse "Player : "#CurrentPlayer.id#" wants to move to "#Position}
+                    {Send CurrentPlayer.port move(_ Position)}
 
                     % Puisque nous sommes en turnByTurn ; on doit attendre la réponse du joueur
                     if Position \= null then
                         % Sous traitter la gestion des mouvement dans StateWatcher
-                        {Send StateWatcherPort move(CurrentPlayer ID Position)}
+                        {Send StateWatcherPort move(CurrentPlayer Position)}
                     end
 
                     % le turnNumber augmente et le currentTime est resetté à l'heure courante
