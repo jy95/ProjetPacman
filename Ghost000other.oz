@@ -1,6 +1,6 @@
 functor
 import
-   % Browser
+   Browser
    CommonUtils
    Input
 export
@@ -164,10 +164,9 @@ in
         [] setMode(M)|T then
             {TreatStream T M GhostId PlayerPosition OnBoard PacmansPosition}
         
-        % A cause du pattern matching, il passe toujours ici
-        %[] M|T then
-        %    {Browser.browse 'unsupported message'#M}
-        %    {TreatStream T Mode GhostId PlayerPosition OnBoard PacmansPosition}
+        [] M|T then
+            {Browser.browse 'unsupported message'#M}
+            {TreatStream T Mode GhostId PlayerPosition OnBoard PacmansPosition}
 
       end
    end

@@ -81,7 +81,6 @@ in
             % 1.1 les points
             if {CheckTimer TurnNumber Input.respawnTimePoint CurrentTime} then
                 {WarningFunctions.spawnAllPoints PortGUI PointsOff Pacmans}
-                % Plus de points déjà utilisés
                 NewPointsOff = nil
             else
                 NewPointsOff = PointsOff
@@ -97,7 +96,6 @@ in
         
             % 1.3 les pacmans
             if {CheckTimer TurnNumber Input.respawnTimePacman CurrentTime} then
-                % Warning la variable dpot reprendre que les pacmans morts avec life >= +1
                 {WarningFunctions.spawnAllPacmans PortGUI Deaths.pacmans Ghosts}
                 NewDeadPacmans = nil
             else
@@ -106,18 +104,14 @@ in
 
             % 1.4 les ghosts
             if {CheckTimer TurnNumber Input.respawnTimeGhost CurrentTime} then
-                % TODO une variable qui ne reprendre que les ghosts morts
                 {WarningFunctions.spawnAllGhosts PortGUI Deaths.ghosts Pacmans}
                 NewDeadGhosts = nil
             else
                 NewDeadGhosts = Deaths.ghosts
             end
-
             % 2. vérification : le huntTime (si le mode était hunt)
             if CurrentState.mode == hunt then
-                % TODO prolongement du bonus si un pacman en reprend un durant cette période
                 if {CheckTimer TurnNumber Input.huntTime BonusTime} then
-                    % TODO le setMode qui prévient tout le monde du changement de mode
                     NewMode = classic
                 else
                     NewMode = CurrentState.mode
@@ -128,12 +122,12 @@ in
 
             % le nouvel état
             IsFinished = false
-            NewState = {Record.adjoinList CurrentState [
+            {Record.adjoinList CurrentState [
                 mode#NewMode
                 deaths#deaths(ghosts: NewDeadGhosts pacmans: NewDeadPacmans)
                 bonusOff#NewBonusOff
                 pointsOff#NewPointsOff
-            ]}
+            ] NewState}
         end
    end
 
@@ -292,7 +286,7 @@ in
         of nil then 
             Victims = PacmansFinallyDead
             PacmansNotDead = NotDeadPacmans
-        [] P|T then CurrentLife in
+        [] P|T then CurrentLife NewScore ID in
             % On prévient le tueur 
             {Send Killer.port killPacman(P.id)}
 
@@ -301,7 +295,11 @@ in
             {Send PortGUI hidePacman(P.id)}
 
             % On prévient la victime
-            {Send P.port gotKilled(_ CurrentLife _)}
+            {Send P.port gotKilled(ID CurrentLife NewScore)}
+
+            % On prévient la GUI de la perte de point/vie du pacman
+            {Send PortGUI lifeUpdate(ID CurrentLife)}
+            {Send PortGUI scoreUpdate(ID NewScore)}
             
             % Ce joueur va définitivement être viré
             if CurrentLife == 0 then
@@ -382,6 +380,7 @@ in
             StateAfterMove = TempState
         else
             % On bouge en prévention le ghost/pacman
+            % TODO ici c'est pour débug mais les autres joueurs opposés devraient être prévenu dans une warningFunction
             if CheckPacmanType then
                 {Send PortGUI movePacman(UserId Position)}
             else
@@ -497,10 +496,13 @@ in
                 % Sauvergarde la nouvelle position
                 % On prend un point
                 if {List.some PointsOff fun{$ X} X == Position end } == false andthen
-                       {List.some PointsSpawn fun{$ X} X == Position end } then
+                       {List.some PointsSpawn fun{$ X} X == Position end } then NewScore ID in
                     % Prévenir que le joueur a gagné un point
-                    {Send UserPort addPoint(Input.rewardPoint _ _)}
-                    % TODO Prévenir tous les joueurs que le point a disparu
+                    {Send UserPort addPoint(Input.rewardPoint ID NewScore)}
+                    % Prévenir la GUI des changements
+                    {Send PortGUI scoreUpdate(ID NewScore)}
+                    {Send PortGUI hidePoint(Position)}
+                    % TODO Prévenir tous les joueurs que le point a disparu - pointRemoved(Position)
 
                     % mettre cette position comme off
                     NewPointsOff = Position|PointsOff
@@ -512,7 +514,11 @@ in
                 elseif {List.some BonusOff fun{$ X} X == Position end } == false andthen
                             {List.some BonusSpawn fun{$ X} X == Position end } then
                     
-                    % TODO prévenir tous les joueurs du changement de mode
+                    % Prévenir la UI des changements
+                    {Send PortGUI hideBonus(Position)}
+                    {Send PortGUI setMode(hunt)}
+
+                    % TODO prévenir tous les joueurs du changement de mode - bonusRemoved(Position)
 
                     % mettre cette position comme off
                     NewMode = hunt
@@ -527,10 +533,13 @@ in
                     NewBonusTime = TempState.bonusTime
                     NewMode = TempState.mode
                 end
+            % Rien du tout , on garde les mêmes variables
+            else
+                NewPointsOff = PointsOff
+                NewBonusOff = BonusOff
+                NewBonusTime = TempState.bonusTime
+                NewMode = TempState.mode
             end
-
-            % Pour débug
-            %{Delay 250000000}
             
             % Update du final state
              {Record.adjoinList TempState [
@@ -570,6 +579,8 @@ in
 
         % Incremente le tour + set son currentTime
         [] increaseTurn|T then FinalState CurrentTurnNumber in
+            % Pour débug
+            {Delay 10000}
             % le tour courant
             CurrentTurnNumber = State.turnNumber
             {Record.adjoinList State [
