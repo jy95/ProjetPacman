@@ -14,9 +14,10 @@ export
    hidePacman: HidePacman
    setMode: SetMode
    applyMove: ApplyMove
-   displayWinner: DisplayWinner
-   lifeUpdate: LifeUpdate
-   scoreUpdate: ScoreUpdate
+   % Mis en commentaire juste pour que le compilateur me fiche la paix 
+   % displayWinner: DisplayWinner
+   % lifeUpdate: LifeUpdate
+   % scoreUpdate: ScoreUpdate
 define
    SpawnAllPoints
    SpawnAllBonus
@@ -31,9 +32,10 @@ define
    HidePacman
    SetMode
    ApplyMove
-   DisplayWinner
-   LifeUpdate
-   ScoreUpdate
+   % Mis en commentaire juste pour que le compilateur me fiche la paix 
+   %DisplayWinner
+   %LifeUpdate
+   %ScoreUpdate
 in
     % List.forAll en concurrence
    proc{ForAllProc List Proc}
@@ -272,7 +274,7 @@ in
         fun{Warn M}
             proc{$ X}
                 case X
-                    of player(id:pacman(id:_ color:_ name:_) port: Z) then
+                    of player(id:_ port: Z) then
                        {Send Z setMode(M)}
                 else
                     skip
@@ -307,9 +309,9 @@ in
     in
         % avertir le GUI du mouvement
         case Player
-                of player(id:pacman(id:_ color:_ name:_) port: Z) then
+                of player(id:pacman(id:_ color:_ name:_) port: _) then
                     {Send PortGUI movePacman(Player.id Position)}
-                [] player(id:ghost(id:_ color:_ name:_) port: Z) then
+                [] player(id:ghost(id:_ color:_ name:_) port: _) then
                     {Send PortGUI moveGhost(Player.id Position)}
                 else
                     skip

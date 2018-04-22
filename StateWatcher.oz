@@ -209,7 +209,7 @@ in
         of G|T then
             if {IsStillAlive Deaths.ghosts G} then
                 {GetLastKnownPosition T Pacmans Deaths AlreadyDeathPacmans CurrentPositions SpawnPosition {
-                    GetLastKnownPositionForPlayer G CurrentPositions SpawnPosition
+                    GetLastKnownPositionForPlayer G CurrentPositions SpawnPosition.ghosts
                 }|Result}
             else
                 {GetLastKnownPosition T Pacmans Deaths AlreadyDeathPacmans CurrentPositions SpawnPosition Result}
@@ -217,10 +217,10 @@ in
         [] nil then
             case Pacmans
                 of P|L then
-                    % Todo empecher un vieux pacman avec life 0 de s'y trouver
+                    % empecher un vieux pacman avec life 0 de s'y trouver
                     if {IsStillAlive Deaths.pacmans P} andthen {IsPacmanFinallyDead P AlreadyDeathPacmans} == false then
                         {GetLastKnownPosition Ghosts L Deaths AlreadyDeathPacmans CurrentPositions SpawnPosition {
-                            GetLastKnownPositionForPlayer P CurrentPositions SpawnPosition
+                            GetLastKnownPositionForPlayer P CurrentPositions SpawnPosition.pacmans
                         }|Result}
                     else
                         {GetLastKnownPosition Ghosts L Deaths AlreadyDeathPacmans CurrentPositions SpawnPosition Result}
@@ -336,7 +336,6 @@ in
    proc{HandleMove CurrentPlayer Position TempState StateAfterMove}
         % le player qu'on traite actuellement
         UserPort = CurrentPlayer.port
-        UserId = CurrentPlayer.id
         PortGUI = TempState.portGUI
         % Savoir s'il s'agit d'un pacman ; true si c'est le cas
         CheckPacmanType = {IsAPacman CurrentPlayer}
@@ -383,12 +382,7 @@ in
             StateAfterMove = TempState
         else
             % On bouge en prévention le ghost/pacman
-            % TODO ici c'est pour débug mais les autres joueurs opposés devraient être prévenu dans une warningFunction
-            if CheckPacmanType then
-                {Send PortGUI movePacman(UserId Position)}
-            else
-                {Send PortGUI moveGhost(UserId Position)}
-            end
+            {WarningFunctions.applyMove PortGUI CurrentPlayer Position if CheckPacmanType then Ghosts else Pacmans end }
 
             % S'il y n'a pas des ennemis, on peut enregistrer sa position sans soucis
             if OpponentList == nil then
@@ -504,8 +498,9 @@ in
                     {Send UserPort addPoint(Input.rewardPoint ID NewScore)}
                     % Prévenir la GUI des changements
                     {Send PortGUI scoreUpdate(ID NewScore)}
-                    {Send PortGUI hidePoint(Position)}
-                    % TODO Prévenir tous les joueurs que le point a disparu - pointRemoved(Position)
+
+                    % Prévenir tous les joueurs que le point a disparu + GUI
+                    {WarningFunctions.hidePoint PortGUI Position Pacmans}
 
                     % mettre cette position comme off
                     NewPointsOff = Position|PointsOff
@@ -517,11 +512,10 @@ in
                 elseif {List.some BonusOff fun{$ X} X == Position end } == false andthen
                             {List.some BonusSpawn fun{$ X} X == Position end } then
                     
-                    % Prévenir la UI des changements
-                    {Send PortGUI hideBonus(Position)}
-                    {Send PortGUI setMode(hunt)}
-
-                    % TODO prévenir tous les joueurs du changement de mode - bonusRemoved(Position)
+                    % Prévenir du changement de mode
+                    {WarningFunctions.setMode PortGUI hunt Pacmans Ghosts}
+                    % prévenir tous les joueurs du changement de mode
+                    {WarningFunctions.hideBonus PortGUI Position Pacmans}
 
                     % mettre cette position comme off
                     NewMode = hunt
