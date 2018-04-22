@@ -43,16 +43,6 @@ in
    % NewState : le nouveau state
    % IsFinished : boolean qui permet de savoir si le jeu est fini (utile dans la proc qui l'appelle)
    proc{RespawnChecker CurrentState NewState IsFinished}
-        % fonction qui return un boolean pour savoir s'il faut faire quelque chose
-        fun{CheckTimer TurnNumber ConstraintTime TimeStart}
-            if Input.isTurnByTurn then
-                (TurnNumber mod ConstraintTime) == 0
-            else
-                % Time.time return a number of seconds
-                % Return true if number of seconds to wait to have a new spawn is ok
-                ({Time.time} - TimeStart) >= ConstraintTime
-            end
-        end
         % les variables common used pour le check des timers
         TurnNumber = CurrentState.turnNumber
         PortGUI  = CurrentState.portGUI
@@ -63,8 +53,21 @@ in
         % la liste de tous les joueurs
         Pacmans = CurrentState.pacmans
         Ghosts = CurrentState.ghosts
+        % Le nombre de joueur (utile pour compter le nombre de tour complet (ou chaque joueur a déjà joué) )
+        NbrPlayers = {List.length Pacmans} + {List.length Ghosts}
         % les morts connus
         Deaths = CurrentState.deaths
+        % fonction qui return un boolean pour savoir s'il faut faire quelque chose
+        fun{CheckTimer TurnNumber ConstraintTime TimeStart}
+            if Input.isTurnByTurn then
+                % Il faut tenir compte que les spawn ont lieu après X tours complets (ou chaque joueur a déjà joué)
+                ( (TurnNumber div NbrPlayers) mod ConstraintTime) == 0
+            else
+                % Time.time return a number of seconds
+                % Return true if number of seconds to wait to have a new spawn is ok
+                ({Time.time} - TimeStart) >= ConstraintTime
+            end
+        end
         % Nouvelles valeurs : pour gérer le changement d'état
         NewPointsOff
         NewBonusOff
