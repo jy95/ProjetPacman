@@ -8,6 +8,15 @@ export
    spawnAllPacmans:SpawnAllPacmans
    initAllPointsAndBonus:InitAllPointsAndBonus
    assignSpawn:AssignSpawn
+   hidePoint: HidePoint
+   hideBonus: HideBonus
+   hideGhost: HideGhost
+   hidePacman: HidePacman
+   setMode: SetMode
+   applyMove: ApplyMove
+   displayWinner: DisplayWinner
+   lifeUpdate: LifeUpdate
+   scoreUpdate: ScoreUpdate
 define
    SpawnAllPoints
    SpawnAllBonus
@@ -16,6 +25,15 @@ define
    InitAllPointsAndBonus
    ForAllProc
    AssignSpawn
+   HidePoint
+   HideBonus
+   HideGhost
+   HidePacman
+   SetMode
+   ApplyMove
+   DisplayWinner
+   LifeUpdate
+   ScoreUpdate
 in
     % List.forAll en concurrence
    proc{ForAllProc List Proc}
@@ -168,4 +186,151 @@ in
         end
    end
 
+   % Hide the point Point on GUI and warn all the pacmans
+   proc{HidePoint PortGUI Point Pacmans}
+        % Procédure interne pour gérer la portée lexical
+        fun{Warn Gui P}
+            proc{$ X}
+                case X
+                    of player(id:pacman(id:_ color:_ name:_) port: Z) then
+                        {Send Z pointRemoved(P)}
+                else
+                    skip
+                end
+            end
+        end
+    in
+        % Prevenir le GUI de ce point effacé
+        {Send PortGUI hidePoint(Point)}
+        % Prévenir les pacmans de ce point effacé
+        thread {ForAllProc Pacmans {Warn PortGUI Point} } end  
+   end
+
+   % Hide the point Point on GUI and warn all the pacmans
+   proc{HideBonus PortGUI Bonus Pacmans}
+        % Procédure interne pour gérer la portée lexical
+        fun{Warn Gui P}
+            proc{$ X}
+                case X
+                    of player(id:pacman(id:_ color:_ name:_) port: Z) then
+                        {Send Z bonusRemoved(P)}
+                else
+                    skip
+                end
+            end
+        end
+    in
+        % Prevenir le GUI de ce point effacé
+        {Send PortGUI hideBonus(Bonus)}
+        % Prévenir les pacmans de ce point effacé
+        thread {ForAllProc Pacmans {Warn PortGUI Bonus} } end    
+   end
+
+    %Hide the ghost Ghost on Gui and warn all the pacmans
+    proc{HideGhost PortGUI Ghost Pacmans}
+        % Procédure interne pour gérer la portée lexical
+        fun{Warn ID}
+            proc{$ X}
+                case X
+                    of player(id:pacman(id:_ color:_ name:_) port: Z) then
+                       {Send Z deathGhost(ID)}
+                else
+                    skip
+                end
+            end
+        end  
+    in
+        % avertir le GUI de sa disparition
+        {Send PortGUI hideGhost(Ghost.id)}
+        % prévenir tous les pacmans de sa disparition
+        thread {ForAllProc Pacmans {Warn Ghost.id}} end
+   end
+
+   %Hide the pacMan pacMan on Gui and warn all the Ghosts
+    proc{HidePacman PortGUI Pacman Ghosts}
+        % Procédure interne pour gérer la portée lexical
+        fun{Warn ID}
+            proc{$ X}
+                case X
+                    of player(id:pacman(id:_ color:_ name:_) port: Z) then
+                       {Send Z deathGhost(ID)}
+                else
+                    skip
+                end
+            end
+        end  
+    in
+        % avertir le GUI de sa disparition
+        {Send PortGUI hidePacman(Pacman.id)}
+        % prévenir tous les ghosts de sa disparition
+        thread {ForAllProc Ghosts {Warn Pacman.id}} end
+   end
+
+   %Une qui prévient le GUI du changement de mode + prévenir tous les joueurs du changement (setMode(M))
+    proc{SetMode PortGUI M Pacmans Ghosts}
+        % Procédure interne pour gérer la portée lexical
+        fun{Warn M}
+            proc{$ X}
+                case X
+                    of player(id:pacman(id:_ color:_ name:_) port: Z) then
+                       {Send Z setMode(M)}
+                else
+                    skip
+                end
+            end
+        end  
+    in
+        % avertir le GUI du changement de mode
+        {Send PortGUI setMode(M)}
+        % prévenir tous les ghosts et pacmans du changement de mode
+        thread {ForAllProc Ghosts {Warn M}} end
+        thread {ForAllProc Pacmans {Warn M}} end
+   end
+
+  % une/deux warningFunction (à ta préférence) qui affiche le pacman/ghost sur le GUI
+  % (movePacman/moveGhost) et qui prévient les joueurs opposés de son mouvement 
+  % (pacmanPos(ID P)/ghostPos(ID P))
+    proc{ApplyMove PortGUI Player Position Adversories}
+        % Procédure interne pour gérer la portée lexical
+        fun{Warn ID P}
+            proc{$ X}
+                case X
+                    of player(id:pacman(id:_ color:_ name:_) port: Z) then
+                       {Send Z ghostPos(ID P)}
+                    [] player(id:ghost(id:_ color:_ name:_) port: Z) then
+                       {Send Z pacmanPos(ID P)}
+                else
+                    skip
+                end
+            end
+        end  
+    in
+        % avertir le GUI du mouvement
+        case Player
+                of player(id:pacman(id:_ color:_ name:_) port: Z) then
+                    {Send PortGUI movePacman(Player.id Position)}
+                [] player(id:ghost(id:_ color:_ name:_) port: Z) then
+                    {Send PortGUI moveGhost(Player.id Position)}
+                else
+                    skip
+                
+        end
+        % prévenir tous les adversaires du move
+        thread {ForAllProc Adversories {Warn Player.id Position}} end
+    end
+    
+    %proc{DisplayWinner PortGUI}
+    %TODO
+    %{Send PortGUI displayWinner ID}
+    %end
+
+    %proc {LifeUpdate Pacman}
+    %TODO
+        %{Send Pacman.port gotKilled(?ID ?NewLife ?NewScore)}
+    %end
+
+    %proc {ScoreUpdate Pacman}
+    %TODO
+   %     {Send Pacman.port addPoint(Add ?ID ?NewScore)}
+    %end
 end
