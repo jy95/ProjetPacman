@@ -61,7 +61,7 @@ in
         fun{CheckTimer TurnNumber ConstraintTime TimeStart}
             if Input.isTurnByTurn then
                 % Il faut tenir compte que les spawn ont lieu après X tours complets (ou chaque joueur a déjà joué)
-                ( (TurnNumber div NbrPlayers) mod ConstraintTime) == 0
+                ( TurnNumber mod (ConstraintTime * NbrPlayers) ) == 0
             else
                 % Time.time return a number of seconds
                 % Return true if number of seconds to wait to have a new spawn is ok
@@ -582,8 +582,6 @@ in
 
         % Incremente le tour + set son currentTime
         [] increaseTurn|T then FinalState CurrentTurnNumber in
-            % Pour débug
-            {Delay 10000}
             % le tour courant
             CurrentTurnNumber = State.turnNumber
             {Record.adjoinList State [

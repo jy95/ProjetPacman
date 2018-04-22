@@ -98,6 +98,9 @@ in
             case Turn
                 of CurrentPlayer|T then Position in
                     
+                    % Pour débug ; delai de 5s
+                    {Delay 5000}
+
                     % envoi d'un message move ; ici grâce au CurrentPlayer on a déjà l'ID
                     {Send CurrentPlayer.port move(_ Position)}
 
