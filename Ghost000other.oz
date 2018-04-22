@@ -19,7 +19,7 @@ in
         case Action
             of update(ID POSITION) then
                 case PacmansPosition
-                    of nil then nil
+                    of nil then target(id: ID position: POSITION)|nil
                     [] target(id: IG position:_)|T then
                         if thread IG == ID end then
                             target(id: ID position: POSITION)|T
@@ -85,7 +85,6 @@ in
 
 % has as many parameters as you want
    proc{TreatStream Stream Mode GhostId PlayerPosition OnBoard PacmansPosition}
-
       case Stream 
         of nil then skip
 
@@ -117,12 +116,10 @@ in
         % position). It should also give its <ghost> ID back in the message. This action is only done if
         % the pacman is considered on the board, if not, ID and P should be bound to null.
         [] move(ID P)|T then
-            if OnBoard == 1 then CurrentPosition NextPosition NextPlayerPosition PacmansList in
+            if OnBoard == 1 then CurrentPosition NextPosition NextPlayerPosition in
                 CurrentPosition = PlayerPosition.currentPosition
-                % On récupère la liste des positions des pacmans
-                {Record.toList PacmansPosition PacmansList}
                 % On choisit la prochaine destination
-                NextPosition = {ChooseNextPosition Mode PacmansList CurrentPosition CurrentPosition nil}
+                NextPosition = {ChooseNextPosition Mode PacmansPosition CurrentPosition CurrentPosition nil}
                 % Cela prend un peu de temps donc on va attendre la fin avant de setter P 
                 {Wait NextPosition}
                 {Record.adjoinAt PlayerPosition currentPosition NextPosition NextPlayerPosition}
