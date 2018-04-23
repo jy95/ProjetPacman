@@ -22,6 +22,7 @@ define
     IsPacmanFinallyDead
     HandlePacmansDeath
     HandleGhostDeath
+    FindBestPlayer
 in
 % Explication sur le state qui gère le jeu: il s'agit d'un record qui stocke diverses informations du jeu :
     % portGUI : le port sur lequel on envoit les infos destinés au GUI
@@ -32,7 +33,7 @@ in
     % pacmans : tous les pacmans du jeu
     % ghosts : tous les ghosts du jeu
     % nbPacmans : le nombre de pacmans encore en vie 
-    % spawnPositions : juste une manière de vérifier après respawn que le joueur se fait tuer
+    % spawnPositions : un record à deux clés (pacmans/ghosts) avec des listes similaires à currentPositions 
     % currentPositions : une liste qui contient la dernière position de chaque joueur (par exemple pt(y: 1 x:5)#player(id: <pacman> port: p)|... ) 
     % deaths : record qui contient sous les clés suivants "pacmans" et "ghosts" une liste des joueurs tombés au champ de bataille sous le bon mapping
     % pointsOff : liste des position sur lequel un point a déjà été récupéré . par exemple pt(y: 2 x:7)|...
@@ -551,6 +552,33 @@ in
              ] StateAfterMove}
         end
     end
+  % find the best pacman of this game - pour une fois, je m'autorise à utiliser un paramètre optionel
+  proc{FindBestPlayer PortGUI Pacmans BestPlayer BestScore}
+    ID
+    NewScore
+  in
+    case Pacmans
+        of nil then
+            if BestPlayer \= null then
+                {Send PortGUI displayWinner(BestPlayer)}
+            end
+        [] P|T then
+            
+            % On récupère son score en lui faisant gagner 0 points aka rien du tout :)
+            {Send P.port addPoint(0 ID NewScore)}
+
+            % si son score est meilleur , on devient le meilleur
+            if BestPlayer \= null andthen NewScore > BestScore then
+                {FindBestPlayer PortGUI T ID NewScore}
+            % Si on avait personne , il devient notre meilleur joueur
+            elseif BestPlayer == null then
+                {FindBestPlayer PortGUI T ID NewScore}
+            % On garde le même pacman
+            else
+                {FindBestPlayer PortGUI T BestPlayer BestScore}
+            end
+    end
+  end
 
   proc{TreatStream Stream State}
     % {Browser.browse Stream.1}
@@ -565,14 +593,12 @@ in
         % On checke les timers de respawn en profitant de notifier si la partie est finie
         [] checkTimers(F)|T then NewState in
             {RespawnChecker State NewState F}
-            {Browser.browse 'C'#NewState.nbPacmans}
             {TreatStream T NewState}
 
         % Va chercher le gagnant parmi tous les pacmans et l'afficher via la GUI
         [] displayWinner|T then
-            % TODO A modifier, faut la calculer à la fin
-            % TODO trouver le best pacman en les interrogant tous avec addPoint (avec un Add de 0)
-            {Send State.portGUI displayWinner(State.bestPlayer)}
+            % trouver le best pacman en les interrogant tous avec addPoint (avec un Add de 0)
+            {FindBestPlayer State.portGUI State.pacmans null null}
             {TreatStream T State}
 
         % Incremente le tour + set son currentTime
