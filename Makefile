@@ -17,7 +17,7 @@ MAIN_FILE=$(addprefix $(COMPILED_FOLDER)/,Main.ozf)
 # TODO ; faire la receipe de base (cad sans faire 'make all' mais make) ; à voir selon enoncé
 
 # main task
-all: bin $(OBJECTS)
+all: bin copyPlayers $(OBJECTS)
 
 # the temp folder to store all the files
 bin:
