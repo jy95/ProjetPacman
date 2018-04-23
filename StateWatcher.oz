@@ -76,7 +76,7 @@ in
         NewMode 
    in
         % 0. Est ce qu'il y a encore un pacman en vie
-        if nbPacmans == 0 then
+        if CurrentState.nbPacmans == 0 then
             IsFinished = true
             NewState = CurrentState
         else
@@ -553,7 +553,7 @@ in
     end
 
   proc{TreatStream Stream State}
-    {Browser.browse Stream.1}
+    % {Browser.browse Stream.1}
     case Stream
         of nil then skip
         
@@ -565,6 +565,7 @@ in
         % On checke les timers de respawn en profitant de notifier si la partie est finie
         [] checkTimers(F)|T then NewState in
             {RespawnChecker State NewState F}
+            {Browser.browse 'C'#NewState.nbPacmans}
             {TreatStream T NewState}
 
         % Va chercher le gagnant parmi tous les pacmans et l'afficher via la GUI

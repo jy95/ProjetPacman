@@ -3,7 +3,7 @@ import
    GUI
    Input
    PlayerManager
-   Browser
+   % Browser
    % Nos fonctions utilitaires
    CommonUtils
    % Nos fonctions de warning
@@ -12,7 +12,7 @@ import
    StateWatcher
 define
    WindowPort
-   TurnByTurn
+   RunGame
    PositionExtractor
    FilterTile
    IsAPacman
@@ -20,6 +20,7 @@ define
    ForAllProc
    InitGame
    LaunchTurn
+   LaunchSimultaneous
 in
    % Detect 
    fun{IsAPacman X}
@@ -94,7 +95,7 @@ in
         if IsFinished == true then
             {Send StateWatcherPort displayWinner}
         else
-            % 3. Prendre le premier joueur de la liste
+            % Prendre le premier joueur de la liste
             case Turn
                 of CurrentPlayer|T then Position in
                     
@@ -122,6 +123,47 @@ in
 
         end
 
+   end
+
+   % Gere le Simultaneous
+   % grace au treatstream ; le code ne change presque pas du LaunchTurn
+   proc{LaunchSimultaneous Turn StateWatcherPort}
+    % savoir si cela vaut la peine de refaire un tour de boucle
+        IsFinished
+    in
+        % On checke les respawn et la fin du mode hunt 
+        {Send StateWatcherPort checkTimers(IsFinished)}
+
+        if IsFinished == true then
+            {Send StateWatcherPort displayWinner}
+        else
+
+            % Prendre le premier joueur de la liste
+            case Turn
+                of CurrentPlayer|T then Position in
+                    
+                    thread
+                    % envoi d'un message move ; ici grâce au CurrentPlayer on a déjà l'ID
+                        {Send CurrentPlayer.port move(_ Position)}
+
+                        % Puisque nous sommes en Simultaneous ; on n'attend pas ce joueur
+                        if thread Position \= null end then
+                            % Sous traitter la gestion des mouvement dans StateWatcher
+                            {Send StateWatcherPort move(CurrentPlayer Position)}
+                        end
+
+                    end
+
+                    % le turnNumber augmente et le currentTime est resetté à l'heure courante
+                    {Send StateWatcherPort increaseTurn}
+
+                    % Appel récursif avec les nouvelles variables
+                    {LaunchSimultaneous T StateWatcherPort}
+            else
+                % Jamais le cas en théorie puisque c'est une liste récursive
+                skip
+            end
+        end
    end
    
    % Initialiaze all the player(s) found in Input.oz
@@ -250,7 +292,7 @@ in
    end
 
    % Game general behaviour - TurnByTurn
-   proc{TurnByTurn PortGUI}
+   proc{RunGame PortGUI}
         % les pacmans et ghost mélangés selon un ordre random - une liste récursive pour gérer les tours
         Turn = {GeneratePlayers PortGUI Input.nbPacman Input.nbGhost Input.pacman Input.ghost Input.colorPacman Input.colorGhost Turn}
         % La liste simple des players : sans récursivité
@@ -305,7 +347,11 @@ in
         )}
 
         % Lancement du tour par tour
-        {LaunchTurn Turn WatcherPort}
+        if Input.isTurnByTurn then
+            {LaunchTurn Turn WatcherPort}
+        else
+            {LaunchSimultaneous Turn WatcherPort}
+        end
  
    end
 
@@ -315,12 +361,8 @@ in
       
       % Open window
       {Send WindowPort buildWindow}
-
-      if Input.isTurnByTurn then
-        {TurnByTurn WindowPort}
-      else
-        {Browser.browse 'TODO'}
-      end
+      % Run the game
+      {RunGame WindowPort}
       
    end
 
