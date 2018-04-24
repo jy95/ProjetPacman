@@ -2,6 +2,7 @@ functor
 import
    Input
    OS
+   Browser
 export
    allowedMove:AllowedPosition
    sortValidMoves:SortValidMoves
@@ -62,13 +63,13 @@ in
    fun{WrappingMoves List Acc}
         case List
             of H|T then
-                if H.x==0 then {WrappingMoves T pt(x: Input.nColumn y: H.y)|Acc}
-                elseif H.x==(Input.nColumn+1) then {WrappingMoves T pt(x: 1 y: H.y)|Acc}
+                if H.x==0 then{WrappingMoves T pt(x: Input.nColumn y: H.y)|Acc}
+                elseif H.x==(Input.nColumn+1) then {WrappingMoves T pt(x: 1 y: H.y)|Acc} 
                 elseif H.y==0 then {WrappingMoves T pt(x: H.x y: Input.nRow)|Acc}
-                elseif H.y==(Input.nColumn+1) then {WrappingMoves T pt(x: H.x y: 1)|Acc}
-                else {WrappingMoves T pt(x: H.x y: H.y)|Acc}
-                end
-            [] nil then nil
+                elseif H.y==(Input.nRow+1) then{WrappingMoves T pt(x: H.x y: 1)|Acc}
+                else {WrappingMoves T pt(x: H.x y: H.y)|Acc}               
+                end              
+            [] nil then Acc
         end
    end
 

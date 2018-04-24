@@ -52,8 +52,10 @@ define
    GhostPink={QTk.newImage photo(url:QTKURL#"/pics/GhostPink.gif")}
    GhostRed={QTk.newImage photo(url:QTKURL#"/pics/GhostRed.gif")}
    GhostYellow={QTk.newImage photo(url:QTKURL#"/pics/GhostYellow.gif")}
-   BonusStar={QTk.newImage photo(url:QTKURL#"/BonusStar.gif")}
-   PointImage={QTk.newImage photo(url:QTKURL#"/PointImage.gif")}in
+   BonusStar={QTk.newImage photo(url:QTKURL#"/pics/BonusStar.gif")}
+   PointImage={QTk.newImage photo(url:QTKURL#"/pics/PointImage.gif")}
+   WallImage={QTk.newImage photo(url:QTKURL#"/pics/WallImage.gif")}
+   in
 
 %%%%% Build the initial window and set it up (call only once)
    fun{BuildWindow}
@@ -98,7 +100,7 @@ define
    
 %%%%% Squares of path and wall
    Squares = square(0:label(text:"" width:1 height:1 bg:c(0 0 204))
-		    1:label(text:"" borderwidth:5 relief:raised width:1 height:1 bg:c(0 0 0))
+		    1:label(text:"" relief:raised width:1  bg:c(0 0 204) height:1 image: WallImage)
 		    2:label(text:"" width:1 height:1 bg:c(0 0 150))
 		    3:label(text:"" width:1 height:1 bg:c(0 0 255))
 		    4:label(text:"" width:1 height:1 bg:c(0 150 150))
