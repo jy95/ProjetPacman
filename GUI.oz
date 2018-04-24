@@ -1,5 +1,6 @@
 functor
 import
+   OS
    QTk at 'x-oz://system/wp/QTk.ozf'
    Input
    Browser
@@ -39,7 +40,18 @@ define
    DrawMap
 
    StateModification
+   QTKURL={OS.getCWD}
+   PacmanDefault={QTk.newImage photo(url:QTKURL#"/PacYellow.gif")}
+   PacmanYellow={QTk.newImage photo(url:QTKURL#"/PacYellow.gif")}
+   PacmanRed={QTk.newImage photo(url:QTKURL#"/PacRed.gif")}
+   PacmanGreen={QTk.newImage photo(url:QTKURL#"/PacGreen.gif")}
+   PacmanPink={QTk.newImage photo(url:QTKURL#"/PacPink.gif")}
 
+   GhostDefault={QTk.newImage photo(url:QTKURL#"/GhostBlue.gif")}
+   GhostBlue={QTk.newImage photo(url:QTKURL#"/GhostBlue.gif")}
+   GhostPink={QTk.newImage photo(url:QTKURL#"/GhostPink.gif")}
+   GhostRed={QTk.newImage photo(url:QTKURL#"/GhostRed.gif")}
+   GhostYellow={QTk.newImage photo(url:QTKURL#"/GhostYellow.gif")}
 in
 
 %%%%% Build the initial window and set it up (call only once)
@@ -118,7 +130,20 @@ in
       Handle HandleLife HandleScore Id Color LabelPacman LabelLife LabelScore
    in
       pacman(id:Id color:Color name:_) = ID
-      LabelPacman = label(text:"P" handle:Handle borderwidth:5 relief:raised bg:Color ipadx:5 ipady:5)
+      case Color 
+            of yellow then
+            LabelPacman = label(text:"P" handle:Handle borderwidth:5 bg:blue relief:raised ipadx:5 ipady:5 image: PacmanYellow)
+            [] red then
+            LabelPacman = label(text:"P" handle:Handle borderwidth:5 bg:blue relief:raised ipadx:5 ipady:5 image: PacmanRed)
+            [] blue then
+            LabelPacman = label(text:"P" handle:Handle borderwidth:5 bg:blue relief:raised ipadx:5 ipady:5 image: PacmanPink)
+            [] green then
+            LabelPacman = label(text:"P" handle:Handle borderwidth:5 bg:blue relief:raised ipadx:5 ipady:5 image: PacmanGreen)
+            else 
+            LabelPacman = label(text:"P" handle:Handle borderwidth:5 bg:blue relief:raised ipadx:5 ipady:5 image: PacmanDefault)
+      end
+
+      
       LabelLife = label(text:Input.nbLives borderwidth:5 handle:HandleLife relief:solid bg:Color ipadx:5 ipady:5)
       LabelScore = label(text:0 borderwidth:5 handle:HandleScore relief:solid bg:Color ipadx:5 ipady:5)
       {Grid.grid configure(LabelPacman row:0 column:0 sticky:wesn)}
@@ -154,7 +179,21 @@ in
       Handle Color LabelGhost
    in
       ghost(id:_ color:Color name:_) = ID
-      LabelGhost = label(text:"G" handle:Handle borderwidth:5 relief:raised bg:Color ipadx:5 ipady:5)
+
+      case Color 
+            of yellow then
+            LabelGhost = label(text:"G" handle:Handle borderwidth:5 relief:raised bg:blue ipadx:5 ipady:5 image: GhostYellow)
+            [] red then
+            LabelGhost = label(text:"G" handle:Handle borderwidth:5 relief:raised bg:blue ipadx:5 ipady:5 image: GhostRed)
+            [] blue then
+            LabelGhost = label(text:"G" handle:Handle borderwidth:5 relief:raised bg:blue ipadx:5 ipady:5 image: GhostBlue)
+            [] green then
+            LabelGhost = label(text:"G" handle:Handle borderwidth:5 relief:raised bg:blue ipadx:5 ipady:5 image: GhostPink)
+            else 
+            LabelGhost = label(text:"G" handle:Handle borderwidth:5 relief:raised bg:blue ipadx:5 ipady:5 image: GhostDefault)
+
+      end
+      %LabelGhost = label(text:"G" handle:Handle borderwidth:5 relief:raised bg:Color ipadx:5 ipady:5)
       {Grid.grid configure(LabelGhost row:0 column:0 sticky:wesn)}
       {Grid.grid remove(Handle)}
       guiGhost(id:ID ghost:Handle color:Color)
