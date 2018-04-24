@@ -85,7 +85,9 @@ in
    % Gere le tour par tour
    % Turn la liste infinie des joueurs
    % StateWatcherPort : notre agent chargé d'accomplir les taches du Main
-   proc{LaunchTurn Turn StateWatcherPort}
+   % CountT : pour savoir quel n°ieme joueur a joué
+   % NbPlayers : le nombre de joueurs dans le game ; pour passer au tour suivant
+   proc{LaunchTurn Turn StateWatcherPort CountT NbPlayers}
         % savoir si cela vaut la peine de refaire un tour de boucle
         IsFinished
    in
@@ -111,11 +113,13 @@ in
                         {Send StateWatcherPort move(CurrentPlayer Position)}
                     end
 
-                    % le turnNumber augmente et le currentTime est resetté à l'heure courante
-                    {Send StateWatcherPort increaseTurn}
-
-                    % Appel récursif avec les nouvelles variables
-                    {LaunchTurn T StateWatcherPort}
+                    % Pour notifier la fin d'un tour
+                    if CountT == NbPlayers then
+                        {Send StateWatcherPort increaseTurn}
+                        {LaunchTurn T StateWatcherPort 1 NbPlayers}
+                    else
+                        {LaunchTurn T StateWatcherPort CountT+1 NbPlayers}
+                    end
             else
                 % Jamais le cas en théorie puisque c'est une liste récursive
                 skip
@@ -144,7 +148,7 @@ in
                     Position
                 in
                     % envoi d'un message move ; ici grâce au CurrentPlayer on a déjà l'ID
-                    {Send CurrentPlayer.port move(_ Position)}
+                    thread {Send CurrentPlayer.port move(_ Position)} end
 
                     % Puisque nous sommes en Simultaneous ; on n'attend pas ce joueur
                     if thread Position \= null end then
@@ -154,8 +158,8 @@ in
                 end}
             end
 
-            % le turnNumber augmente et le currentTime est resetté à l'heure courante
-            {Send StateWatcherPort increaseTurn}
+            % currentTime est resetté à l'heure courante
+            {Send StateWatcherPort increaseTime}
 
             % Appel récursif
             {LaunchSimultaneous Players StateWatcherPort}
@@ -340,11 +344,16 @@ in
             % Les points bonus déjà sur la map (sous forme d'une liste)
             bonusSpawn: BonusSpawn
             pointsSpawn: PointsSpawn
+            % Les listes associant les item et leur tour/temps d'obtention
+            pointsAndTime: nil
+            bonusAndTime: nil
+            pacmansAndTime: nil
+            ghostsAndTime: nil
         )}
 
         % Lancement du tour par tour
         if Input.isTurnByTurn then
-            {LaunchTurn Turn WatcherPort}
+            {LaunchTurn Turn WatcherPort 1 Input.nbPacman+Input.nbGhost}
         else
             {LaunchSimultaneous Players WatcherPort}
         end

@@ -38,6 +38,10 @@ in
     % deaths : record qui contient sous les clés suivants "pacmans" et "ghosts" une liste des joueurs tombés au champ de bataille sous le bon mapping
     % pointsOff : liste des position sur lequel un point a déjà été récupéré . par exemple pt(y: 2 x:7)|...
     % bonusOff :  liste des position sur lequel un bonus a déjà été récupéré . par exemple pt(y: 2 x:7)|...
+    % pointsAndTime : liste de points déjà pris comme tuples T#pt(x: y:) ou T sera un nombre en turnByTurn ; un temps en simultaneious
+    % bonusAndTime : liste de bonus déjà pris , comme pointsAndTime
+    % pacmansAndTime : liste de players(ID: <pacman> , port : P) défini comme tuple T#Player(...) , comme pointsAndTime
+    % ghostsAndTime : pareil que le précedent , pour les ghosts
   
    % Procédure qui va vérifier les différents timers 
    % CurrentState ; voir spec dans LaunchTurn
@@ -49,24 +53,44 @@ in
         PortGUI  = CurrentState.portGUI
         CurrentTime = CurrentState.currentTime
         BonusTime = CurrentState.bonusTime
-        PointsOff = CurrentState.pointsOff
-        BonusOff = CurrentState.bonusOff
         % la liste de tous les joueurs
         Pacmans = CurrentState.pacmans
         Ghosts = CurrentState.ghosts
-        % Le nombre de joueur (utile pour compter le nombre de tour complet (ou chaque joueur a déjà joué) )
-        NbrPlayers = {List.length Pacmans} + {List.length Ghosts}
-        % les morts connus
-        Deaths = CurrentState.deaths
-        % fonction qui return un boolean pour savoir s'il faut faire quelque chose
-        fun{CheckTimer TurnNumber ConstraintTime TimeStart}
-            if Input.isTurnByTurn then
-                % Il faut tenir compte que les spawn ont lieu après X tours complets (ou chaque joueur a déjà joué)
-                ( TurnNumber mod (ConstraintTime * NbrPlayers) ) == 0
-            else
-                % Time.time return a number of seconds
-                % Return true if number of seconds to wait to have a new spawn is ok
-                ({Time.time} - TimeStart) >= ConstraintTime
+        % proc qui filtre les ..AndTime et qui retourne tout ceux qui matchent selon le mode
+        % Un peu comme une méthode partition , elle va rejetter le contenu qui ne matche pas dans une autre variable
+        % ResultList ; tout ceux qui matchent (en débarrasant au passage le T histoire d'avoir accès à la data)
+        % NewAndTimeList ; comme AndTimeList mais avec les éléments qui matche pas
+        % FailedList ; AndTimeList sauf les éléments de ResultList
+        % TimelyFilterConstraint AndTimePoints Points NewTimePoints NewPointsOff TurnNumber Input.respawnTimePoint
+        proc{TimelyFilterConstraint AndTimeList ResultList FailedList NewAndTimeList TurnNumber ConstraintTime}
+            case AndTimeList
+                of nil then
+                    ResultList = nil
+                    FailedList = nil
+                    NewAndTimeList = nil
+                [] T#D|L then
+                    % En turnByTurn on ne récupère que les tuples avec T + ConstraintTime = TurnNumber
+                    % https://moodleucl.uclouvain.be/mod/forum/discuss.php?d=280621
+                    if Input.isTurnByTurn then
+                        if T + ConstraintTime == TurnNumber then R in
+                            ResultList = D|R
+                            {TimelyFilterConstraint L R FailedList NewAndTimeList TurnNumber ConstraintTime}
+                        else Y Z in
+                            FailedList = D|Y
+                            NewAndTimeList = T#D|Z
+                            {TimelyFilterConstraint L ResultList Y Z TurnNumber ConstraintTime}
+                        end
+                    % En simultané ; il faut checker que {Time.time} - T >= ConstraintTime 
+                    else
+                        if {Time.time} - CurrentTime >= ConstraintTime then R in
+                            ResultList = D|R
+                            {TimelyFilterConstraint L R FailedList NewAndTimeList TurnNumber ConstraintTime}
+                        else Y Z in
+                            FailedList = D|Y
+                            NewAndTimeList = T#D|Z
+                            {TimelyFilterConstraint L ResultList Y Z TurnNumber ConstraintTime}
+                        end
+                    end
             end
         end
         % Nouvelles valeurs : pour gérer le changement d'état
@@ -74,7 +98,22 @@ in
         NewBonusOff
         NewDeadPacmans
         NewDeadGhosts
-        NewMode 
+        NewMode
+        % Les listes permettant de gérer les respawn
+        AndTimePoints = CurrentState.pointsAndTime
+        AndTimeGhosts = CurrentState.ghostsAndTime
+        AndTimePacmans = CurrentState.pacmansAndTime
+        AndTimeBonus = CurrentState.bonusAndTime
+        % Les nouvelles valeurs des précédentes
+        NewTimePoints
+        NewTimeGhosts
+        NewTimePacmans
+        NewTimeBonus
+        % les nouveaux 
+        Points
+        Bonus
+        PacmansD
+        GhostsD
    in
         % 0. Est ce qu'il y a encore un pacman en vie
         if CurrentState.nbPacmans == 0 then
@@ -82,41 +121,31 @@ in
             NewState = CurrentState
         else
             % 1. vérification : les 4 RespawnTime
+            
             % 1.1 les points
-            if {CheckTimer TurnNumber Input.respawnTimePoint CurrentTime} then
-                {WarningFunctions.spawnAllPoints PortGUI PointsOff Pacmans}
-                NewPointsOff = nil
-            else
-                NewPointsOff = PointsOff
-            end
+            % On récupère dans Points les positions qui peuvent réapparaitrent
+            % Dans NewTimePoints , AndTimePoints sans les éléments précédents
+            % NewPointsOff : Les points qui sont toujours off
+            {TimelyFilterConstraint AndTimePoints Points NewTimePoints NewPointsOff TurnNumber Input.respawnTimePoint}
+            {WarningFunctions.spawnAllPoints PortGUI Points Pacmans}
         
             % 1.2 les bonus
-            if {CheckTimer TurnNumber Input.respawnTimeBonus CurrentTime} then
-                {WarningFunctions.spawnAllBonus PortGUI BonusOff Pacmans}
-                NewBonusOff = nil
-            else
-                NewBonusOff = BonusOff
-            end
+            {TimelyFilterConstraint AndTimeBonus Bonus NewTimeBonus NewBonusOff TurnNumber Input.respawnTimeBonus}
+            {WarningFunctions.spawnAllBonus PortGUI Bonus Pacmans}
         
             % 1.3 les pacmans
-            if {CheckTimer TurnNumber Input.respawnTimePacman CurrentTime} then
-                {WarningFunctions.spawnAllPacmans PortGUI Deaths.pacmans Ghosts}
-                NewDeadPacmans = nil
-            else
-                NewDeadPacmans = Deaths.pacmans
-            end
+            {TimelyFilterConstraint AndTimePacmans PacmansD NewTimePacmans NewDeadPacmans  TurnNumber Input.respawnTimePacman}
+            {WarningFunctions.spawnAllPacmans PortGUI PacmansD Ghosts}
 
             % 1.4 les ghosts
-            if {CheckTimer TurnNumber Input.respawnTimeGhost CurrentTime} then
-                {WarningFunctions.spawnAllGhosts PortGUI Deaths.ghosts Pacmans}
-                NewDeadGhosts = nil
-            else
-                NewDeadGhosts = Deaths.ghosts
-            end
+            {TimelyFilterConstraint AndTimeGhosts GhostsD NewTimeGhosts NewDeadGhosts TurnNumber Input.respawnTimeGhost}
+            {WarningFunctions.spawnAllGhosts PortGUI GhostsD Pacmans}
+
             % 2. vérification : le huntTime (si le mode était hunt)
             if CurrentState.mode == hunt then
                 % si le bonus time est expiré
-                if {CheckTimer TurnNumber Input.huntTime BonusTime} then
+                if ( Input.isTurnByTurn andthen TurnNumber mod Input.huntTime ==0 ) orelse
+                   ( Input.isTurnByTurn == false andthen {Time.time} - BonusTime  >= Input.huntTime ) then
                     NewMode = classic
                     % Si on était en mode bonus , il faut prévenir du changement
                     if CurrentState.mode \= classic then
@@ -130,12 +159,16 @@ in
             end
 
             % le nouvel état
-            IsFinished = false
             {Record.adjoinList CurrentState [
                 mode#NewMode
                 deaths#deaths(ghosts: NewDeadGhosts pacmans: NewDeadPacmans)
                 bonusOff#NewBonusOff
                 pointsOff#NewPointsOff
+                % les nouveaux
+                pointsAndTime#NewTimePoints
+                pacmansAndTime#NewTimePacmans
+                ghostsAndTime#NewTimeGhosts
+                bonusAndTime#NewTimeBonus
             ] NewState}
         end
    end
@@ -603,6 +636,10 @@ in
             % trouver le best pacman en les interrogant tous avec addPoint (avec un Add de 0)
             {FindBestPlayer State.portGUI State.pacmans null null}
             {TreatStream T State}
+        
+        % Incrémente son currentTime
+        [] increaseTime|T then
+            {TreatStream T {Record.adjoinList State [currentTime#{Time.time}]} }
 
         % Incremente le tour + set son currentTime
         [] increaseTurn|T then FinalState CurrentTurnNumber in
