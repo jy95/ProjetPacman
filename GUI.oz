@@ -41,21 +41,19 @@ define
 
    StateModification
    QTKURL={OS.getCWD}
-   PacmanDefault={QTk.newImage photo(url:QTKURL#"/PacYellow.gif")}
-   PacmanYellow={QTk.newImage photo(url:QTKURL#"/PacYellow.gif")}
-   PacmanRed={QTk.newImage photo(url:QTKURL#"/PacRed.gif")}
-   PacmanGreen={QTk.newImage photo(url:QTKURL#"/PacGreen.gif")}
-   PacmanPink={QTk.newImage photo(url:QTKURL#"/PacPink.gif")}
-
-   GhostDefault={QTk.newImage photo(url:QTKURL#"/GhostBlue.gif")}
-   GhostBlue={QTk.newImage photo(url:QTKURL#"/GhostBlue.gif")}
-   GhostPink={QTk.newImage photo(url:QTKURL#"/GhostPink.gif")}
-   GhostRed={QTk.newImage photo(url:QTKURL#"/GhostRed.gif")}
-   GhostYellow={QTk.newImage photo(url:QTKURL#"/GhostYellow.gif")}
-
+   PacmanDefault={QTk.newImage photo(url:QTKURL#"/pics/PacYellow.gif")}
+   PacmanYellow={QTk.newImage photo(url:QTKURL#"/pics/PacYellow.gif")}
+   PacmanRed={QTk.newImage photo(url:QTKURL#"/pics/PacRed.gif")}
+   PacmanGreen={QTk.newImage photo(url:QTKURL#"/pics/PacGreen.gif")}
+   PacmanPink={QTk.newImage photo(url:QTKURL#"/pics/PacPink.gif")}
+   
+   GhostDefault={QTk.newImage photo(url:QTKURL#"/pics/GhostBlue.gif")}
+   GhostBlue={QTk.newImage photo(url:QTKURL#"/pics/GhostBlue.gif")}
+   GhostPink={QTk.newImage photo(url:QTKURL#"/pics/GhostPink.gif")}
+   GhostRed={QTk.newImage photo(url:QTKURL#"/pics/GhostRed.gif")}
+   GhostYellow={QTk.newImage photo(url:QTKURL#"/pics/GhostYellow.gif")}
    BonusStar={QTk.newImage photo(url:QTKURL#"/BonusStar.gif")}
-   PointImage={QTk.newImage photo(url:QTKURL#"/PointImage.gif")}
-in
+   PointImage={QTk.newImage photo(url:QTKURL#"/PointImage.gif")}in
 
 %%%%% Build the initial window and set it up (call only once)
    fun{BuildWindow}
