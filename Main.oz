@@ -126,8 +126,8 @@ in
    end
 
    % Gere le Simultaneous
-   % grace au treatstream ; le code ne change presque pas du LaunchTurn
-   proc{LaunchSimultaneous Turn StateWatcherPort}
+   % grace au treatstream ; le code ne change (structurellement parlant) presque pas du LaunchTurn
+   proc{LaunchSimultaneous Players StateWatcherPort}
     % savoir si cela vaut la peine de refaire un tour de boucle
         IsFinished
     in
@@ -138,31 +138,27 @@ in
             {Send StateWatcherPort displayWinner}
         else
 
-            % Prendre le premier joueur de la liste
-            case Turn
-                of CurrentPlayer|T then Position in
-                    
-                    thread
+            thread
+                % On interroge de manière simultané tous les joueurs
+                {ForAllProc Players proc{$ CurrentPlayer}
+                    Position
+                in
                     % envoi d'un message move ; ici grâce au CurrentPlayer on a déjà l'ID
-                        {Send CurrentPlayer.port move(_ Position)}
+                    {Send CurrentPlayer.port move(_ Position)}
 
-                        % Puisque nous sommes en Simultaneous ; on n'attend pas ce joueur
-                        if thread Position \= null end then
-                            % Sous traitter la gestion des mouvement dans StateWatcher
-                            {Send StateWatcherPort move(CurrentPlayer Position)}
-                        end
-
+                    % Puisque nous sommes en Simultaneous ; on n'attend pas ce joueur
+                    if thread Position \= null end then
+                        % Sous traitter la gestion des mouvement dans StateWatcher
+                        {Send StateWatcherPort move(CurrentPlayer Position)}
                     end
-
-                    % le turnNumber augmente et le currentTime est resetté à l'heure courante
-                    {Send StateWatcherPort increaseTurn}
-
-                    % Appel récursif avec les nouvelles variables
-                    {LaunchSimultaneous T StateWatcherPort}
-            else
-                % Jamais le cas en théorie puisque c'est une liste récursive
-                skip
+                end}
             end
+
+            % le turnNumber augmente et le currentTime est resetté à l'heure courante
+            {Send StateWatcherPort increaseTurn}
+
+            % Appel récursif
+            {LaunchSimultaneous Players StateWatcherPort}
         end
    end
    
@@ -350,7 +346,7 @@ in
         if Input.isTurnByTurn then
             {LaunchTurn Turn WatcherPort}
         else
-            {LaunchSimultaneous Turn WatcherPort}
+            {LaunchSimultaneous Players WatcherPort}
         end
  
    end

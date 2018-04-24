@@ -159,6 +159,10 @@ in
       % if the pacman is considered alive, if not, ID and P should be bound to null.
       [] move(ID P)|T then
         if OnBoard == 1 andthen PlayerState.life > 0 then CurrentPosition NextPosition NextPlayerState in
+            % si on joue en simultané, il faut attendre un temps random avant de répondre
+            if Input.isTurnByTurn == false then
+              {Delay {CommonUtils.randomNumber Input.thinkMin Input.thinkMax} }
+            end
             CurrentPosition = PlayerState.currentPosition
             % On choisit la prochaine destination
             NextPosition = {ChooseNextPosition Mode CurrentPosition PointsSpawn BonusSpawn GhostsSpawn}
@@ -166,10 +170,6 @@ in
             {Wait NextPosition}
             {Record.adjoinAt PlayerState currentPosition NextPosition NextPlayerState}
 
-            % si on joue en simultané, il faut attendre un temps random avant de répondre
-            if Input.isTurnByTurn == false then
-              {Delay {CommonUtils.randomNumber Input.thinkMin Input.thinkMax} }
-            end
 
             P = NextPosition
             ID = PacmanID

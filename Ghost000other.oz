@@ -10,6 +10,7 @@ define
    TreatStream
    ChooseNextPosition
    TargetsStateModification
+   BestDirectionForGhost
 in
    % To handle new pacman or position of current pacman(s)
    % Action : 'update' / 'remove' for the current state
@@ -40,6 +41,36 @@ in
         end
    end
 
+   % Compute the best direction to take , based on previous one
+   % Inputs : Moves and Target are the current variable
+   % Inputs: BestMove and PreviousTarget keep trace of previous work
+   % ResultMove and ResultTarget are the final result
+   proc{BestDirectionForGhost Mode Moves Target BestMove PreviousTarget ResultMove ResultTarget}
+        case Moves
+            of H|T then
+                case Mode
+                    of classic then
+                        % A more interessting target to hunt - minimal path
+                        if {CommonUtils.compareMoves Target H BestMove PreviousTarget '<'} then
+	                        {BestDirectionForGhost Mode T Target H Target ResultMove ResultTarget}
+                        else
+	                        {BestDirectionForGhost Mode T Target BestMove PreviousTarget ResultMove ResultTarget}
+                        end
+                    [] hunt then
+                        % run away of killer pacman(s) - maximal path
+                        if {CommonUtils.compareMoves Target H BestMove PreviousTarget '>'} then
+	                        {BestDirectionForGhost Mode T Target H Target ResultMove ResultTarget}
+                        else
+	                        {BestDirectionForGhost Mode T Target BestMove PreviousTarget ResultMove ResultTarget}
+                        end
+                end 
+ 
+            [] nil then
+                ResultMove = BestMove
+                ResultTarget = PreviousTarget
+        end
+    end
+
    % A determinist way to decide which position should be taken by our ghost
    fun{ChooseNextPosition Mode PacmansPosition CurrentPosition BestPosition PreviousTarget}
             % X = column et Y = row
@@ -64,7 +95,7 @@ in
                         LastTarget = PreviousTarget
                     end
                     % Procédure qui va setter les deux variables local pour déterminer le bon choix
-                    {CommonUtils.bestDirectionForGhost Mode ValidMoves P.position BestPosition LastTarget 
+                    {BestDirectionForGhost Mode ValidMoves P.position BestPosition LastTarget 
                     ResultMove ResultTarget}
 
                     % Appel récursif avec les nouveaux parametres
@@ -117,16 +148,16 @@ in
         % the pacman is considered on the board, if not, ID and P should be bound to null.
         [] move(ID P)|T then
             if OnBoard == 1 then CurrentPosition NextPosition NextPlayerPosition in
+                % si on joue en simultané, il faut attendre un temps random avant de répondre
+                if Input.isTurnByTurn == false then
+                    {Delay {CommonUtils.randomNumber Input.thinkMin Input.thinkMax} }
+                end
                 CurrentPosition = PlayerPosition.currentPosition
                 % On choisit la prochaine destination
                 NextPosition = {ChooseNextPosition Mode PacmansPosition CurrentPosition CurrentPosition nil}
                 % Cela prend un peu de temps donc on va attendre la fin avant de setter P 
                 {Wait NextPosition}
                 {Record.adjoinAt PlayerPosition currentPosition NextPosition NextPlayerPosition}
-                % si on joue en simultané, il faut attendre un temps random avant de répondre
-                if Input.isTurnByTurn == false then
-                    {Delay {CommonUtils.randomNumber Input.thinkMin Input.thinkMax} }
-                end
 
                 P = NextPosition
                 ID = GhostId

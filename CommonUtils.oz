@@ -5,9 +5,9 @@ import
 export
    allowedMove:AllowedPosition
    sortValidMoves:SortValidMoves
-   bestDirectionForGhost:BestDirectionForGhost
    randomNumber:RandomNumber
    positionToInt:PositionToInt
+   compareMoves:CompareMoves
 define
    AllowedPosition
    SortValidMoves
@@ -16,7 +16,6 @@ define
    WantedElement
    DistanceBetween
    CompareMoves
-   BestDirectionForGhost
    RandomNumber
    PositionToInt
 in
@@ -80,36 +79,6 @@ in
    fun{CompareMoves NewMove NewTarget LastMove LastTarget Operator}
         {Value.Operator {DistanceBetween NewMove NewTarget} {DistanceBetween LastMove LastTarget} }
    end 
-
-   % Compute the best direction to take , based on previous one
-   % Inputs : Moves and Target are the current variable
-   % Inputs: BestMove and PreviousTarget keep trace of previous work
-   % ResultMove and ResultTarget are the final result
-   proc{BestDirectionForGhost Mode Moves Target BestMove PreviousTarget ResultMove ResultTarget}
-        case Moves
-            of H|T then
-                case Mode
-                    of classic then
-                        % A more interessting target to hunt - minimal path
-                        if {CompareMoves Target H BestMove PreviousTarget '<'} then
-	                        {BestDirectionForGhost Mode T Target H Target ResultMove ResultTarget}
-                        else
-	                        {BestDirectionForGhost Mode T Target BestMove PreviousTarget ResultMove ResultTarget}
-                        end
-                    [] hunt then
-                        % run away of killer pacman(s) - maximal path
-                        if {CompareMoves Target H BestMove PreviousTarget '>'} then
-	                        {BestDirectionForGhost Mode T Target H Target ResultMove ResultTarget}
-                        else
-	                        {BestDirectionForGhost Mode T Target BestMove PreviousTarget ResultMove ResultTarget}
-                        end
-                end 
- 
-            [] nil then
-                ResultMove = BestMove
-                ResultTarget = PreviousTarget
-        end
-    end
 
    % A funny-easy way to access more quickly to next element (instead of list loop) 
    % mostly useful for pacman (with its own data structure) so that it could act a little quick that ghost 
