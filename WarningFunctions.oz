@@ -157,7 +157,7 @@ in
         case BonusSpawn
             of nil then skip
             [] B|T then
-                {Send PortGUI spawnPoint(B)}
+                {Send PortGUI spawnBonus(B)}
                 % Prévenir les pacmans de ce nouveau point
                 thread {ForAllProc Pacmans {Warn B} } end
                 {SpawnAllBonus PortGUI T Pacmans}

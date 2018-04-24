@@ -46,13 +46,16 @@ define
    PacmanRed={QTk.newImage photo(url:QTKURL#"/pics/PacRed.gif")}
    PacmanGreen={QTk.newImage photo(url:QTKURL#"/pics/PacGreen.gif")}
    PacmanPink={QTk.newImage photo(url:QTKURL#"/pics/PacPink.gif")}
-
+   
    GhostDefault={QTk.newImage photo(url:QTKURL#"/pics/GhostBlue.gif")}
    GhostBlue={QTk.newImage photo(url:QTKURL#"/pics/GhostBlue.gif")}
    GhostPink={QTk.newImage photo(url:QTKURL#"/pics/GhostPink.gif")}
    GhostRed={QTk.newImage photo(url:QTKURL#"/pics/GhostRed.gif")}
    GhostYellow={QTk.newImage photo(url:QTKURL#"/pics/GhostYellow.gif")}
-in
+   BonusStar={QTk.newImage photo(url:QTKURL#"/pics/BonusStar.gif")}
+   PointImage={QTk.newImage photo(url:QTKURL#"/pics/PointImage.gif")}
+   WallImage={QTk.newImage photo(url:QTKURL#"/pics/WallImage.gif")}
+   in
 
 %%%%% Build the initial window and set it up (call only once)
    fun{BuildWindow}
@@ -97,7 +100,7 @@ in
    
 %%%%% Squares of path and wall
    Squares = square(0:label(text:"" width:1 height:1 bg:c(0 0 204))
-		    1:label(text:"" borderwidth:5 relief:raised width:1 height:1 bg:c(0 0 0))
+		    1:label(text:"" relief:raised width:1  bg:c(0 0 204) height:1 image: WallImage)
 		    2:label(text:"" width:1 height:1 bg:c(0 0 150))
 		    3:label(text:"" width:1 height:1 bg:c(0 0 255))
 		    4:label(text:"" width:1 height:1 bg:c(0 150 150))
@@ -235,7 +238,7 @@ in
    fun{InitBonus Grid Position}
       Handle Label
    in
-      Label = label(text:"" height:1 width:1 handle:Handle bg:red)
+      Label = label(text:"" height:1 width:1 handle:Handle bg:red image: BonusStar)
       {Grid.grid configure(Label row:0 column:0)}
       {Grid.grid remove(Handle)}
       guiBonus(position:Position bonus:Handle)
@@ -257,7 +260,7 @@ in
    fun{InitPoint Grid Position}
       Handle Label
    in
-      Label = label(text:"" height:1 width:1 handle:Handle bg:white)
+      Label = label(text:"" height:1 width:1 handle:Handle bg:white image: PointImage)
       {Grid.grid configure(Label row:0 column:0)}
       {Grid.grid remove(Handle)}
       guiPoint(position:Position point:Handle)

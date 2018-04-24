@@ -53,13 +53,21 @@ in
    
    NRow = 7
    NColumn = 12
-   Map = [[1 1 1 1 1 1 1 1 1 1 1 1]
-	  [1 0 0 0 0 0 3 0 0 0 0 1]
-	  [1 0 1 1 1 0 1 1 0 1 0 1]
-	  [1 0 0 0 1 0 0 1 0 1 0 1]
-	  [1 0 1 0 1 1 0 1 0 1 0 1]
-	  [1 4 1 0 2 0 0 0 2 0 0 1]
-	  [1 1 1 1 1 1 1 1 1 1 1 1]]
+   %Map = [[1 1 1 1 1 1 1 1 1 1 1 1]
+	%  [1 0 0 0 0 0 3 0 0 0 0 1]
+	 % [1 0 1 1 1 0 1 1 0 1 0 1]
+	  %[1 0 0 0 1 0 0 1 0 1 0 1]
+	  %[1 0 1 0 1 1 0 1 0 1 0 1]
+	  %[1 4 1 0 2 0 0 0 2 0 0 1]
+	  %[1 1 1 1 1 1 1 1 1 1 1 1]]
+
+    Map = [[0 0 0 0 0 0 0 0 0 0 0 0]
+	  [0 0 0 0 0 0 3 0 0 0 0 0]
+	  [0 0 1 1 1 0 1 1 0 1 0 0]
+	  [0 0 0 0 1 0 0 1 0 1 0 0]
+	  [0 0 1 0 1 1 0 1 0 1 0 0]
+	  [0 4 1 0 2 0 0 0 2 0 0 0]
+	  [0 0 0 0 0 0 0 0 0 0 0 0]]
 
 %%%% Respawn times %%%%
    
@@ -86,7 +94,7 @@ in
    ColorPacman = [yellow red]
    NbGhost = 1
    Ghost = [ghost000other]%ghost000random
-   ColorGhost = [green]% black red white]
+   ColorGhost = [blue]% black red white]
 
 %%%% Thinking parameters (only in simultaneous) %%%%
    
