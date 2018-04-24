@@ -115,8 +115,13 @@ in
             end
             % 2. vérification : le huntTime (si le mode était hunt)
             if CurrentState.mode == hunt then
+                % si le bonus time est expiré
                 if {CheckTimer TurnNumber Input.huntTime BonusTime} then
                     NewMode = classic
+                    % Si on était en mode bonus , il faut prévenir du changement
+                    if CurrentState.mode \= classic then
+                        {WarningFunctions.setMode PortGUI classic Pacmans Ghosts}
+                    end
                 else
                     NewMode = CurrentState.mode
                 end
@@ -294,9 +299,8 @@ in
             % On prévient le tueur 
             {Send Killer.port killPacman(P.id)}
 
-            % TODO - On prévient les ghosts de la mort du pacman - deathPacman(ID)
-            % cette ligne c'est pour tester sur la GUI mais tu devrais utiliser une des warning function dont je parlais
-            {Send PortGUI hidePacman(P.id)}
+            % On prévient les ghosts de la mort du pacman 
+            {WarningFunctions.hidePacman PortGUI P Ghosts}
 
             % On prévient la victime
             {Send P.port gotKilled(ID CurrentLife NewScore)}
@@ -322,9 +326,8 @@ in
             % On prévient le tueur  killGhost(IDg ?IDp ?NewScore):
             {Send Killer.port killGhost(G.id _ _)}
 
-            % TODO - On prévient les pacmans de la mort du ghost - deathGhost(ID)
-            % cette ligne c'est pour tester sur la GUI mais tu devrais utiliser une des warning function dont je parlais
-            {Send PortGUI hideGhost(G.id)}
+            % On prévient les pacmans de la mort du ghost - deathGhost(ID)
+            {WarningFunctions.hideGhost PortGUI G Pacmans}
 
             % On prévient la victime
             {Send G.port gotKilled()}

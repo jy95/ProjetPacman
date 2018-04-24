@@ -158,7 +158,8 @@ in
                 % Cela prend un peu de temps donc on va attendre la fin avant de setter P 
                 {Wait NextPosition}
                 {Record.adjoinAt PlayerPosition currentPosition NextPosition NextPlayerPosition}
-
+                % {Browser.browse ID#' A REPONDU '#NextPosition}
+                
                 P = NextPosition
                 ID = GhostId
                 {TreatStream T Mode GhostId NextPlayerPosition OnBoard PacmansPosition}

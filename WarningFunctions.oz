@@ -14,10 +14,6 @@ export
    hidePacman: HidePacman
    setMode: SetMode
    applyMove: ApplyMove
-   % Mis en commentaire juste pour que le compilateur me fiche la paix 
-   % displayWinner: DisplayWinner
-   % lifeUpdate: LifeUpdate
-   % scoreUpdate: ScoreUpdate
 define
    SpawnAllPoints
    SpawnAllBonus
@@ -32,10 +28,6 @@ define
    HidePacman
    SetMode
    ApplyMove
-   % Mis en commentaire juste pour que le compilateur me fiche la paix 
-   %DisplayWinner
-   %LifeUpdate
-   %ScoreUpdate
 in
     % List.forAll en concurrence
    proc{ForAllProc List Proc}
@@ -321,18 +313,4 @@ in
         thread {ForAllProc Adversories {Warn Player.id Position}} end
     end
     
-    %proc{DisplayWinner PortGUI}
-    %TODO
-    %{Send PortGUI displayWinner ID}
-    %end
-
-    %proc {LifeUpdate Pacman}
-    %TODO
-        %{Send Pacman.port gotKilled(?ID ?NewLife ?NewScore)}
-    %end
-
-    %proc {ScoreUpdate Pacman}
-    %TODO
-   %     {Send Pacman.port addPoint(Add ?ID ?NewScore)}
-    %end
 end

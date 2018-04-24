@@ -169,7 +169,7 @@ in
             % Cela prend un peu de temps donc on va attendre la fin avant de setter P 
             {Wait NextPosition}
             {Record.adjoinAt PlayerState currentPosition NextPosition NextPlayerState}
-
+            % {Browser.browse ID#' A REPONDU '#NextPosition}
 
             P = NextPosition
             ID = PacmanID
