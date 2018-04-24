@@ -10,6 +10,7 @@ REMOVE=rm # sur Windows , remplacer par del
 FILES=Input CommonUtils WarningFunctions StateWatcher Ghost000other Pacman000other PlayerManager GUI Main
 SOURCES=$(FILES:=.oz)
 OBJECTS=$(FILES:=.ozf)
+PICTURES_FOLDER=pics
 COMPILED_FOLDER=bin
 COMPILED_FILES=$(addprefix $(COMPILED_FOLDER)/,$(FILES:=.ozf))
 MAIN_FILE=$(addprefix $(COMPILED_FOLDER)/,Main.ozf)
@@ -17,10 +18,14 @@ MAIN_FILE=$(addprefix $(COMPILED_FOLDER)/,Main.ozf)
 # TODO ; faire la receipe de base (cad sans faire 'make all' mais make) ; à voir selon enoncé
 
 # main task
-all: bin copyPlayers $(OBJECTS)
+all: bin pics copyPlayers $(OBJECTS)
 
-# the temp folder to store all the files
-bin:
+# copy our pictures to destination
+pics: bin	
+	cp -r $(PICTURES_FOLDER) $(COMPILED_FOLDER)
+
+# the temp folder to store all the files - useful to have a clean folder with everything compiled
+bin:	
 	mkdir -p $(COMPILED_FOLDER)
 
 # besoin des joueurs random pour l'instant ; par la suite remplacer par joueurs des autres
@@ -35,4 +40,4 @@ $(OBJECTS):	$(SOURCES)
 .PHONY : clean
 # sans doute un rmdir serait plus simple mais windows n'en a pas un simple ^^
 clean :
-	$(REMOVE) $(COMPILED_FILES)
+	$(REMOVE) -r $(COMPILED_FOLDER)
