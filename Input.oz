@@ -86,7 +86,7 @@ in
    ColorPacman = [yellow red]
    NbGhost = 1
    Ghost = [ghost000other]%ghost000random
-   ColorGhost = [green]% black red white]
+   ColorGhost = [blue]% black red white]
 
 %%%% Thinking parameters (only in simultaneous) %%%%
    

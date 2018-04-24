@@ -95,8 +95,11 @@ in
     Right = pt(x: CurrentPositionX+1 y: CurrentPositionY)
     Up = pt(x: CurrentPositionX y: CurrentPositionY-1)
     Down = pt(x: CurrentPositionX y: CurrentPositionY+1)
+
+    WrappingMoves = {CommonUtils.wrappingMoves [Left Right Up Down] nil}
+
     % seulement les mouvement valides
-    ValidMoves = {CommonUtils.sortValidMoves [Left Right Up Down] }
+    ValidMoves = {CommonUtils.sortValidMoves WrappingMoves }
   in
     % Retrieve all the positions hold by ghost
     case Mode

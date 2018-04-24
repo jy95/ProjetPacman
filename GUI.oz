@@ -52,6 +52,9 @@ define
    GhostPink={QTk.newImage photo(url:QTKURL#"/GhostPink.gif")}
    GhostRed={QTk.newImage photo(url:QTKURL#"/GhostRed.gif")}
    GhostYellow={QTk.newImage photo(url:QTKURL#"/GhostYellow.gif")}
+
+   BonusStar={QTk.newImage photo(url:QTKURL#"/BonusStar.gif")}
+   PointImage={QTk.newImage photo(url:QTKURL#"/PointImage.gif")}
 in
 
 %%%%% Build the initial window and set it up (call only once)
@@ -235,7 +238,7 @@ in
    fun{InitBonus Grid Position}
       Handle Label
    in
-      Label = label(text:"" height:1 width:1 handle:Handle bg:red)
+      Label = label(text:"" height:1 width:1 handle:Handle bg:red image: BonusStar)
       {Grid.grid configure(Label row:0 column:0)}
       {Grid.grid remove(Handle)}
       guiBonus(position:Position bonus:Handle)
@@ -257,7 +260,7 @@ in
    fun{InitPoint Grid Position}
       Handle Label
    in
-      Label = label(text:"" height:1 width:1 handle:Handle bg:white)
+      Label = label(text:"" height:1 width:1 handle:Handle bg:white image: PointImage)
       {Grid.grid configure(Label row:0 column:0)}
       {Grid.grid remove(Handle)}
       guiPoint(position:Position point:Handle)

@@ -8,6 +8,7 @@ export
    randomNumber:RandomNumber
    positionToInt:PositionToInt
    compareMoves:CompareMoves
+   wrappingMoves:WrappingMoves
 define
    AllowedPosition
    SortValidMoves
@@ -18,6 +19,7 @@ define
    CompareMoves
    RandomNumber
    PositionToInt
+   WrappingMoves
 in
    % Generate a random number between I and J
    fun{RandomNumber I J}
@@ -40,6 +42,7 @@ in
    end
 
    % A way to detect if a position is allowed - boolean type exists :)
+   % Verfiy if wall
    % X rely on NColumn , Y on NRow
    fun{AllowedPosition Position}
       X = Position.x
@@ -53,6 +56,22 @@ in
 	    {WantedElement X Y} \= 1
       end
    end
+
+   % Inspiré de la Cfilter du cours
+   % Manage the self-wrapping of the MAP
+   fun{WrappingMoves List Acc}
+        case List
+            of H|T then
+                if H.x==0 then {WrappingMoves T pt(x: Input.nColumn y: H.y)|Acc}
+                elseif H.x==(Input.nColumn+1) then {WrappingMoves T pt(x: 1 y: H.y)|Acc}
+                elseif H.y==0 then {WrappingMoves T pt(x: H.x y: Input.nRow)|Acc}
+                elseif H.y==(Input.nColumn+1) then {WrappingMoves T pt(x: H.x y: 1)|Acc}
+                else {WrappingMoves T pt(x: H.x y: H.y)|Acc}
+                end
+            [] nil then nil
+        end
+   end
+
 
    % Inspiré de la Cfilter du cours
    % Cela prend du temps pour parcourrir le double tableau à la facon Oz
