@@ -109,7 +109,7 @@ in
         NewTimeGhosts
         NewTimePacmans
         NewTimeBonus
-        % les nouveaux 
+        % les variables de résults 
         Points
         Bonus
         PacmansD
@@ -164,7 +164,7 @@ in
                 deaths#deaths(ghosts: NewDeadGhosts pacmans: NewDeadPacmans)
                 bonusOff#NewBonusOff
                 pointsOff#NewPointsOff
-                % les nouveaux
+                % les nouvelles andTime variables
                 pointsAndTime#NewTimePoints
                 pacmansAndTime#NewTimePacmans
                 ghostsAndTime#NewTimeGhosts
@@ -374,6 +374,8 @@ in
         % le player qu'on traite actuellement
         UserPort = CurrentPlayer.port
         PortGUI = TempState.portGUI
+        % La variable à setter pour les andTimes
+        TimestampVar = if Input.isTurnByTurn == false then {Time.time} else TempState.turnNumber end
         % Savoir s'il s'agit d'un pacman ; true si c'est le cas
         CheckPacmanType = {IsAPacman CurrentPlayer}
         % all the dead players
@@ -395,11 +397,16 @@ in
         OpponentList = {FindOpponents PlayersOnThisPosition CheckPacmanType}
         % savoir si le pacman pourra récupérer le point/bonus si toujours en vie
         StillAvailable
-        % les variables pour checker le gain de points/bonus
+        % les variables pour checker le gain de points/bonus (Amélioration : récupréer les ..off depuis andTime)
         PointsOff = TempState.pointsOff
         PointsSpawn = TempState.pointsSpawn
         BonusOff = TempState.bonusOff
         BonusSpawn = TempState.bonusSpawn
+        % Les nouveaux AndTime variables
+        NewTimePoints
+        NewTimeGhosts
+        NewTimePacmans
+        NewTimeBonus
         % Les nouvelles variables pour l'update du state
         NewPointsOff
         NewBonusOff
@@ -428,6 +435,12 @@ in
                 NewDeadGhosts = Deaths.ghosts
                 NewDeadPacmans = Deaths.pacmans
                 NewNbPacmans = TempState.nbPacmans
+
+                % les andTimes
+                NewTimePoints = TempState.pointsAndTime
+                NewTimeGhosts = TempState.ghostsAndTime
+                NewTimePacmans = TempState.pacmansAndTime
+                NewTimeBonus = TempState.bonusAndTime
                 % sa nouvelle position
                 NewCurrentPositions = {List.append Position#CurrentPlayer|nil 
                                         {CurrentPositionsWithoutDeathPlayers LastKnownPosition CurrentPlayer|nil} }
@@ -450,6 +463,9 @@ in
 
                         % On rajoute cette nouvelles victime aux précédentes
                         NewFinallyDeathPacmans = {List.append FinallyDeathPacmans Victims}
+
+                        % On rajoute ce pacman 
+                        NewTimePacmans = {List.append TempState.pacmansAndTime {List.map PacmansNotDead fun{$ X} TimestampVar#X  end}}
 
                         % Les joueurs avec encore de la vie sont rajoutés
                         NewDeadPacmans = {List.append Deaths.pacmans PacmansNotDead}
@@ -474,6 +490,9 @@ in
 
                         % On rajoute cette nouvelles victime aux précédentes
                         NewFinallyDeathPacmans = {List.append FinallyDeathPacmans Victims}
+
+                        % On rajoute ces pacmans 
+                        NewTimePacmans = {List.append TempState.pacmansAndTime {List.map PacmansNotDead fun{$ X} TimestampVar#X  end}}
 
                         % Les joueurs avec encore de la vie sont rajoutés
                         NewDeadPacmans = {List.append Deaths.pacmans PacmansNotDead}
@@ -500,6 +519,9 @@ in
                         % on le vire des positions courantes
                         NewCurrentPositions = {CurrentPositionsWithoutDeathPlayers LastKnownPosition OpponentList}
 
+                        % On rajoute ces ghosts
+                        NewTimeGhosts = {List.append TempState.ghostsAndTime {List.map OpponentList fun{$ X} TimestampVar#X  end}}
+
                         % Des morts à rajouter du côté des ghots
                         NewDeadGhosts = {List.append Deaths.ghosts OpponentList}
 
@@ -514,6 +536,9 @@ in
 
                         % on le vire des positions courantes
                         NewCurrentPositions = {CurrentPositionsWithoutDeathPlayers LastKnownPosition CurrentPlayer|nil}
+
+                        % On rajoute ces ghosts
+                        NewTimeGhosts = {List.append TempState.ghostsAndTime {List.map [CurrentPlayer] fun{$ X} TimestampVar#X  end}}
 
                         % Des morts à rajouter du côté des ghots
                         NewDeadGhosts = {List.append Deaths.ghosts CurrentPlayer|nil}
@@ -566,6 +591,8 @@ in
                     NewBonusOff = BonusOff
                     NewBonusTime = TempState.bonusTime
                     NewMode = TempState.mode
+                    NewTimeBonus = TempState.bonusAndTime
+                    NewTimePoints = TempState.pointsAndTime
                 end
             % Rien du tout , on garde les mêmes variables
             else
@@ -573,18 +600,27 @@ in
                 NewBonusOff = BonusOff
                 NewBonusTime = TempState.bonusTime
                 NewMode = TempState.mode
+                NewTimeBonus = TempState.bonusAndTime
+                NewTimePoints = TempState.pointsAndTime
             end
             
             % Update du final state
              {Record.adjoinList TempState [
+                % à voir si on conserve
                 pointsOff#NewPointsOff
                 bonusOff#NewBonusOff
+                % Gestion des mouvements et mode
                 bonusTime#NewBonusTime
                 currentPositions#NewCurrentPositions
                 deaths#deaths(pacmans: NewDeadPacmans ghosts: NewDeadGhosts)
                 pacmansWithNoLife#NewFinallyDeathPacmans
                 nbPacmans#NewNbPacmans
                 mode#NewMode
+                % les nouvelles andTime variables
+                pointsAndTime#NewTimePoints
+                pacmansAndTime#NewTimePacmans
+                ghostsAndTime#NewTimeGhosts
+                bonusAndTime#NewTimeBonus
              ] StateAfterMove}
         end
     end
