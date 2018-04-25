@@ -5,7 +5,10 @@ import
    CommonUtils
 export
    portPlayer:StartPlayer
-define   
+define
+   Mannathan
+   PositionExtractor
+   FilterTile
    StartPlayer
    TreatStream
    ChooseNextPosition
@@ -13,6 +16,11 @@ define
    ClosestGhost
    CheckFct
    TargetsStateModification
+   CalculateHeuristic
+   CalculateHeuristicBonus
+   CalculateHeuristicGhost
+   CalculateHeuristicPoint
+   BestMove
 in
 
   % To handle new ghost or position of current ghost(s)
@@ -23,7 +31,7 @@ in
         case Action
             of update(ID POSITION) then
                 case GhostsPosition
-                    of nil then nil
+                    of nil then target(id: ID position: POSITION)|nil
                     [] target(id: IG position:_)|T then
                         if thread IG == ID end then
                             target(id: ID position: POSITION)|T
@@ -84,8 +92,70 @@ in
         P
     end
   end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  %Heuristic: Avoid Ghost, go in the direction of the bonuses, try eating points
+  fun {BestMove Moves Ghosts Bonus Answer Value}
+    TempValue in
+    case Moves of H|T then TempValue={CalculateHeuristic H Ghosts Bonus}
+                            if TempValue > Value then {BestMove T Ghosts Bonus H TempValue}
+                            else {BestMove T Ghosts Bonus Answer Value}
+                            end
+              [] nil then Answer
+    end
+  end
+  
+  fun {CalculateHeuristic Position Ghosts Bonus}
+      Temp in
+      Temp={CalculateHeuristicGhost Position Ghosts 0}+
+      {CalculateHeuristicBonus Position Bonus 0}+
+      {CalculateHeuristicPoint Position}
+      %{Browser.browse Temp}
+      Temp
+  end
 
-  % A determinist way to decide which position should be taken by our pacman
+
+  %Heuristic about Points
+  fun {CalculateHeuristicPoint Position}
+    % {Value.hasFeature Points PositionAsInt} andthen Points.PositionAsInt == true ?
+    %TODO
+    0
+  end
+
+  %Heuristic about Ghost
+  fun {CalculateHeuristicGhost Position Ghosts Answer}
+    case Ghosts 
+      of H|T then 
+      
+      0
+      %{CalculateHeuristicGhost Position T Answer+{CommonUtils.distanceBetween Position Position}}
+      [] nil then Answer %Positive answer
+    end
+  end
+
+  %Heuristic about Bonus
+  fun {CalculateHeuristicBonus Position Bonus Answer}
+  Temp in
+    case Bonus
+     
+      of H|T then
+      Temp = {Mannathan Position H}
+      {CalculateHeuristicBonus Position T Answer-Temp}
+      [] nil then Answer %Negative answser
+    end
+  end
+
+  fun{Mannathan P1 P2}
+    Temp1 Temp2 in
+      if P1.x>P2.x then Temp1 = P1.x-P2.x
+      else Temp1 = P2.x-P1.x
+      end
+      if P1.y>P2.y then Temp2 = P1.y-P2.y
+      else Temp2 = P2.y-P1.y
+      end
+      Temp1+Temp2
+  end
+
+   % A determinist way to decide which position should be taken by our pacman
   fun{ChooseNextPosition Mode CurrentPosition Points Bonus Ghosts}
     % X = column et Y = row
     CurrentPositionX = CurrentPosition.x
@@ -104,18 +174,66 @@ in
    % {Browser.browse WrappingMoves}
     % seulement les mouvement valides
     ValidMoves = {CommonUtils.sortValidMoves WrappingMoves }
+    ExplorerMap
+    Bonuses
   in
     % Retrieve all the positions hold by ghost
     case Mode
       % in classical mode : take the best bonus available if there is no ghost in this
       of classic then
-        {BestBonusAvailable ValidMoves Points Bonus Ghosts 0 CurrentPosition}
-
+        
+        %{Delay 50}
+        ExplorerMap = thread {PositionExtractor Input.map 1} end
+        Bonuses= {FilterTile ExplorerMap fun{$ E} E == 4 end }
+        %{Browser.browse Bonuses}
+        %{Delay 50}
+        {BestMove ValidMoves Ghosts Bonuses ValidMoves.1 {CalculateHeuristic ValidMoves.1 Ghosts Bonuses}}
+        %{BestBonusAvailable ValidMoves Points Bonus Ghosts 0 CurrentPosition}
       % in hunt mode : simply eat the closest ghost to us
       [] hunt then
         {ClosestGhost ValidMoves Ghosts CurrentPosition}
     end
   end
+
+  % Filtering tile
+   fun{FilterTile S F}
+        case S
+            of nil then nil
+            [] H|T then
+                case H
+                    of Val#Position then
+                        if thread {F Val} end then
+                            Position|{FilterTile T F}
+                        else
+                            {FilterTile T F}
+                        end
+                    else
+                        % no match
+                        {FilterTile T F}
+                end
+        end
+   end
+
+   % Explorer each tile of the map to extract information - maybe in the stream way later
+   fun{PositionExtractor Map CurrentRow}
+        fun{ExtractRow List Row Column}
+            case List
+                of nil then nil
+                [] H|T then H#pt(x: Column y: Row)|{ExtractRow T Row Column+1}
+            end
+        end
+        fun {Append Xs Ys}
+            case Xs of nil then Ys
+            [] X|Xr then X|{Append Xr Ys}
+            end
+        end
+   in
+        case Map
+            of nil then nil
+            [] H|T then
+                {Append {ExtractRow H CurrentRow 1} {PositionExtractor T CurrentRow+1}}
+        end 
+   end
 
   % ID is a <pacman> ID
   fun{StartPlayer ID}

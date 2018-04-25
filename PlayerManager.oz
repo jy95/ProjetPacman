@@ -4,6 +4,7 @@ import
    Ghost000random
    Pacman000other
    Ghost000other
+   Pacman000superSmart
 export
    playerGenerator:PlayerGenerator
 define
@@ -15,6 +16,7 @@ in
       of pacman000random then {Pacman000random.portPlayer ID}
       [] ghost000random then {Ghost000random.portPlayer ID}
       [] pacman000other then {Pacman000other.portPlayer ID}
+      [] pacman000superSmart then {Pacman000superSmart.portPlayer ID}
       [] ghost000other then {Ghost000other.portPlayer ID}
       end
    end

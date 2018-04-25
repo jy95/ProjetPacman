@@ -163,6 +163,8 @@ in
                 
                 P = NextPosition
                 ID = GhostId
+
+                %{Browser.browse PacmansPosition}
                 {TreatStream T Mode GhostId NextPlayerPosition OnBoard PacmansPosition}
             else
                 ID = null

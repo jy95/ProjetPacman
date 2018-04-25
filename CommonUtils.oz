@@ -10,6 +10,7 @@ export
    positionToInt:PositionToInt
    compareMoves:CompareMoves
    wrappingMoves:WrappingMoves
+   wantedElement:WantedElement
 define
    AllowedPosition
    SortValidMoves

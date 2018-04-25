@@ -55,7 +55,7 @@ in
    NColumn = 12
    Map = [[1 1 1 1 1 1 1 1 1 1 1 1]
 	  [1 0 0 0 0 0 3 0 0 0 0 1]
-	  [1 0 1 1 1 0 1 1 0 1 0 1]
+	  [1 0 1 4 1 0 1 1 0 1 3 1]
 	  [1 0 0 0 1 0 0 1 0 1 0 1]
 	  [1 0 1 0 1 1 0 1 0 1 0 1]
 	  [1 4 1 0 2 0 0 0 2 0 0 1]
@@ -91,11 +91,11 @@ in
 %%%% Players description %%%%
 
    NbPacman = 2
-   Pacman = [pacman000other pacman000other] % pacman000random 
+   Pacman = [pacman000superSmart pacman000superSmart] % pacman000random 
    ColorPacman = [yellow red]
-   NbGhost = 1
-   Ghost = [ghost000other]%ghost000random
-   ColorGhost = [blue]% black red white]
+   NbGhost = 2
+   Ghost = [ghost000other ghost000other]%ghost000random
+   ColorGhost = [blue red]% black red white]
 
 %%%% Thinking parameters (only in simultaneous) %%%%
    

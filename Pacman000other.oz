@@ -95,13 +95,8 @@ in
     Right = pt(x: CurrentPositionX+1 y: CurrentPositionY)
     Up = pt(x: CurrentPositionX y: CurrentPositionY-1)
     Down = pt(x: CurrentPositionX y: CurrentPositionY+1)
-  %  {Browser.browse "WrapBefore"}
-  %  {Browser.browse [Left Right Up Down]}
-
-
+    
     WrappingMoves = {CommonUtils.wrappingMoves [Left Right Up Down] nil}
-   % {Browser.browse "WrapAfter"}
-   % {Browser.browse WrappingMoves}
     % seulement les mouvement valides
     ValidMoves = {CommonUtils.sortValidMoves WrappingMoves }
   in
