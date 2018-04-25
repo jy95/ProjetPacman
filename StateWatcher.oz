@@ -51,45 +51,43 @@ in
         % les variables common used pour le check des timers
         TurnNumber = CurrentState.turnNumber
         PortGUI  = CurrentState.portGUI
-        CurrentTime = CurrentState.currentTime
-        BonusTime = CurrentState.bonusTime
         % la liste de tous les joueurs
         Pacmans = CurrentState.pacmans
         Ghosts = CurrentState.ghosts
+        
+        % Fonction pour évaluer le temps
+        fun{CheckTimer TurnNumber ConstraintTime TimeStart}
+            if Input.isTurnByTurn then
+                % Il faut tenir compte que les spawn ont lieu après X tours complets (ou chaque joueur a déjà joué)
+                ConstraintTime + TimeStart == TurnNumber
+            else
+                % Time.time return a number of seconds
+                % Return true if number of seconds to wait to have a new spawn is ok
+                ({Time.time} - TimeStart) >= ConstraintTime
+            end
+        end
+
         % proc qui filtre les ..AndTime et qui retourne tout ceux qui matchent selon le mode
-        % Un peu comme une méthode partition , elle va rejetter le contenu qui ne matche pas dans une autre variable
-        % ResultList ; tout ceux qui matchent (en débarrasant au passage le T histoire d'avoir accès à la data)
-        % NewAndTimeList ; comme AndTimeList mais avec les éléments qui matche pas
-        % FailedList ; AndTimeList sauf les éléments de ResultList
-        % TimelyFilterConstraint AndTimePoints Points NewTimePoints NewPointsOff TurnNumber Input.respawnTimePoint
-        proc{TimelyFilterConstraint AndTimeList ResultList FailedList NewAndTimeList TurnNumber ConstraintTime}
+        % Un peu comme une méthode partition ; sauf qu'on a trois variables à setter
+        % A : une liste simple de D ayant CheckTimer à true;
+        % B une liste simple de D ayant CheckTimer à false
+        % C : La liste d'origine avec les éléments CheckTimer à false
+        proc{TimelyFilterConstraint AndTimeList A B C ConstraintTime}
             case AndTimeList
                 of nil then
-                    ResultList = nil
-                    FailedList = nil
-                    NewAndTimeList = nil
+                    A = nil
+                    B = nil
+                    C = nil
                 [] T#D|L then
                     % En turnByTurn on ne récupère que les tuples avec T + ConstraintTime = TurnNumber
                     % https://moodleucl.uclouvain.be/mod/forum/discuss.php?d=280621
-                    if Input.isTurnByTurn then
-                        if T + ConstraintTime == TurnNumber then R in
-                            ResultList = D|R
-                            {TimelyFilterConstraint L R FailedList NewAndTimeList TurnNumber ConstraintTime}
-                        else Y Z in
-                            FailedList = D|Y
-                            NewAndTimeList = T#D|Z
-                            {TimelyFilterConstraint L ResultList Y Z TurnNumber ConstraintTime}
-                        end
-                    % En simultané ; il faut checker que {Time.time} - T >= ConstraintTime 
-                    else
-                        if {Time.time} - CurrentTime >= ConstraintTime then R in
-                            ResultList = D|R
-                            {TimelyFilterConstraint L R FailedList NewAndTimeList TurnNumber ConstraintTime}
-                        else Y Z in
-                            FailedList = D|Y
-                            NewAndTimeList = T#D|Z
-                            {TimelyFilterConstraint L ResultList Y Z TurnNumber ConstraintTime}
-                        end
+                    if {CheckTimer TurnNumber ConstraintTime T} then R in
+                        A = D|R
+                        {TimelyFilterConstraint L R B C ConstraintTime}
+                    else Y Z in
+                        B = D|Y
+                        C = T#D|Z
+                        {TimelyFilterConstraint L A Y Z ConstraintTime}
                     end
             end
         end
@@ -121,31 +119,29 @@ in
             NewState = CurrentState
         else
             % 1. vérification : les 4 RespawnTime
-            
             % 1.1 les points
-            % On récupère dans Points les positions qui peuvent réapparaitrent
-            % Dans NewTimePoints , AndTimePoints sans les éléments précédents
-            % NewPointsOff : Les points qui sont toujours off
-            {TimelyFilterConstraint AndTimePoints Points NewTimePoints NewPointsOff TurnNumber Input.respawnTimePoint}
+            {TimelyFilterConstraint AndTimePoints Points NewPointsOff NewTimePoints Input.respawnTimePoint}
             {WarningFunctions.spawnAllPoints PortGUI Points Pacmans}
-        
             % 1.2 les bonus
-            {TimelyFilterConstraint AndTimeBonus Bonus NewTimeBonus NewBonusOff TurnNumber Input.respawnTimeBonus}
+            {TimelyFilterConstraint AndTimeBonus Bonus NewBonusOff NewTimeBonus Input.respawnTimeBonus}
             {WarningFunctions.spawnAllBonus PortGUI Bonus Pacmans}
         
             % 1.3 les pacmans
-            {TimelyFilterConstraint AndTimePacmans PacmansD NewTimePacmans NewDeadPacmans  TurnNumber Input.respawnTimePacman}
+            {TimelyFilterConstraint AndTimePacmans PacmansD NewDeadPacmans NewTimePacmans Input.respawnTimePacman}
             {WarningFunctions.spawnAllPacmans PortGUI PacmansD Ghosts}
 
             % 1.4 les ghosts
-            {TimelyFilterConstraint AndTimeGhosts GhostsD NewTimeGhosts NewDeadGhosts TurnNumber Input.respawnTimeGhost}
+            {Browser.browse 'lolo'}
+            % Probleme ICI
+            % AndTimeGhosts est unbound _ ; à cause de 
+            {TimelyFilterConstraint AndTimeGhosts GhostsD NewDeadGhosts NewTimeGhosts Input.respawnTimeGhost}
             {WarningFunctions.spawnAllGhosts PortGUI GhostsD Pacmans}
+            {Browser.browse 'rien'}
 
             % 2. vérification : le huntTime (si le mode était hunt)
             if CurrentState.mode == hunt then
                 % si le bonus time est expiré
-                if ( Input.isTurnByTurn andthen TurnNumber mod Input.huntTime ==0 ) orelse
-                   ( Input.isTurnByTurn == false andthen {Time.time} - BonusTime  >= Input.huntTime ) then
+                if {CheckTimer TurnNumber Input.huntTime CurrentState.bonusTime} then
                     NewMode = classic
                     % Si on était en mode bonus , il faut prévenir du changement
                     if CurrentState.mode \= classic then
@@ -159,6 +155,7 @@ in
             end
 
             % le nouvel état
+            IsFinished = false
             {Record.adjoinList CurrentState [
                 mode#NewMode
                 deaths#deaths(ghosts: NewDeadGhosts pacmans: NewDeadPacmans)
@@ -437,10 +434,9 @@ in
                 NewNbPacmans = TempState.nbPacmans
 
                 % les andTimes
-                NewTimePoints = TempState.pointsAndTime
                 NewTimeGhosts = TempState.ghostsAndTime
                 NewTimePacmans = TempState.pacmansAndTime
-                NewTimeBonus = TempState.bonusAndTime
+
                 % sa nouvelle position
                 NewCurrentPositions = {List.append Position#CurrentPlayer|nil 
                                         {CurrentPositionsWithoutDeathPlayers LastKnownPosition CurrentPlayer|nil} }
@@ -569,6 +565,9 @@ in
                     NewBonusOff = BonusOff
                     NewBonusTime = TempState.bonusTime
                     NewMode = TempState.mode
+                    % Sans oublier d'enregistrer cette action
+                    NewTimePoints = TimestampVar#Position|TempState.pointsAndTime
+                    NewTimeBonus = TempState.bonusAndTime
 
                 % On prend un bonus
                 elseif {List.some BonusOff fun{$ X} X == Position end } == false andthen
@@ -583,7 +582,12 @@ in
                     NewMode = hunt
                     NewBonusOff =  Position|BonusOff
                     NewPointsOff = PointsOff
-                    NewBonusTime = {Time.time}
+                    % Selon le mode on stocke soit Time.time ou le tour du bonus
+                    NewBonusTime = if Input.isTurnByTurn then TempState.bonusTime else {Time.time} end
+                    
+                    % Sans oublier d'enregistrer cette action
+                    NewTimePoints = TempState.pointsAndTime
+                    NewTimeBonus = TimestampVar#Position|TempState.bonusAndTime
                     
                 % Rien du tout , on garde les mêmes variables
                 else
@@ -653,7 +657,7 @@ in
   end
 
   proc{TreatStream Stream State}
-    % {Browser.browse Stream.1}
+    {Browser.browse Stream.1}
     case Stream
         of nil then skip
         

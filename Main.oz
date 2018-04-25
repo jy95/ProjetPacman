@@ -3,7 +3,7 @@ import
    GUI
    Input
    PlayerManager
-   % Browser
+   Browser
    % Nos fonctions utilitaires
    CommonUtils
    % Nos fonctions de warning
@@ -102,8 +102,7 @@ in
                 of CurrentPlayer|T then Position in
                     
                     % Pour débug ; delai de 5s
-                     {Delay 5000}
-
+                    % {Delay 5000}
                     % envoi d'un message move ; ici grâce au CurrentPlayer on a déjà l'ID
                     {Send CurrentPlayer.port move(_ Position)}
 
@@ -324,7 +323,6 @@ in
         WatcherPort = {StateWatcher.portWindow currentState(
             % les variables pour gérer les tours
             portGUI: PortGUI
-            currentTime: {Time.time}
             bonusTime: _
             turnNumber: 1
             mode: classic
@@ -350,7 +348,7 @@ in
             pacmansAndTime: nil
             ghostsAndTime: nil
         )}
-
+        
         % Lancement du tour par tour
         if Input.isTurnByTurn then
             {LaunchTurn Turn WatcherPort 1 Input.nbPacman+Input.nbGhost}
