@@ -131,12 +131,8 @@ in
             {WarningFunctions.spawnAllPacmans PortGUI PacmansD Ghosts}
 
             % 1.4 les ghosts
-            {Browser.browse 'lolo'}
-            % Probleme ICI
-            % AndTimeGhosts est unbound _ ; à cause de 
             {TimelyFilterConstraint AndTimeGhosts GhostsD NewDeadGhosts NewTimeGhosts Input.respawnTimeGhost}
             {WarningFunctions.spawnAllGhosts PortGUI GhostsD Pacmans}
-            {Browser.browse 'rien'}
 
             % 2. vérification : le huntTime (si le mode était hunt)
             if CurrentState.mode == hunt then
@@ -366,7 +362,8 @@ in
             {HandleGhostDeath PortGUI Killer T Pacmans}
     end
    end
-
+   
+   % Procédure générale pour gérer les moves
    proc{HandleMove CurrentPlayer Position TempState StateAfterMove}
         % le player qu'on traite actuellement
         UserPort = CurrentPlayer.port
@@ -415,6 +412,59 @@ in
         NewDeadGhosts
         NewDeadPacmans
         NewFinallyDeathPacmans
+        % Procédures qui vont setter les variables :
+
+        % Setter les variables StillAvailable NewFinallyDeathPacmans FinallyDeathPacmans 
+        % NewDeadGhosts NewDeadPacmans NewNbPacmans NewTimeGhosts NewTimePacmans
+        proc{NoOpponentsFoundSetter StillAvailable NewFinallyDeathPacmans FinallyDeathPacmans NewDeadGhosts NewDeadPacmans NewNbPacmans NewTimeGhosts NewTimePacmans}
+            StillAvailable = true
+            NewFinallyDeathPacmans = FinallyDeathPacmans
+            NewDeadGhosts = Deaths.ghosts
+            NewDeadPacmans = Deaths.pacmans
+            NewNbPacmans = TempState.nbPacmans
+
+            % les andTimes
+            NewTimeGhosts = TempState.ghostsAndTime
+            NewTimePacmans = TempState.pacmansAndTime
+
+            % sa nouvelle position
+            NewCurrentPositions = {List.append Position#CurrentPlayer|nil 
+                                        {CurrentPositionsWithoutDeathPlayers LastKnownPosition CurrentPlayer|nil} }
+        end
+
+        % Setter les variables NewCurrentPositions NewNbPacmans NewFinallyDeathPacmans NewTimePacmans 
+        % NewTimeGhosts NewDeadPacmans NewDeadGhosts StillAvailable
+        proc{PacmanKilledByFirstGhost KillerPlayer NewCurrentPositions NewNbPacmans NewFinallyDeathPacmans NewTimePacmans NewTimeGhosts NewDeadPacmans NewDeadGhosts StillAvailable}
+            Victims
+            PacmansNotDead
+        in
+            % sous traitter les warnings aux joueurs concernées
+            {HandlePacmansDeath PortGUI KillerPlayer Ghosts CurrentPlayer|nil nil nil Victims PacmansNotDead}
+
+            % on le vire des positions courantes
+            NewCurrentPositions = {CurrentPositionsWithoutDeathPlayers LastKnownPosition CurrentPlayer|nil}
+
+            % On décrémente le nombre de pacmans selon le nombre d'éléments dans Victims
+            NewNbPacmans = TempState.nbPacmans - {List.length Victims}
+
+            % On rajoute cette nouvelles victime aux précédentes
+            NewFinallyDeathPacmans = {List.append FinallyDeathPacmans Victims}
+
+            % On rajoute ce pacman 
+            NewTimePacmans = {List.append TempState.pacmansAndTime {List.map PacmansNotDead fun{$ X} TimestampVar#X  end}}
+
+            % Aucun ghost mort
+            NewTimeGhosts = TempState.ghostsAndTime
+
+            % Les joueurs avec encore de la vie sont rajoutés
+            NewDeadPacmans = {List.append Deaths.pacmans PacmansNotDead}
+
+            % Aucun mort à rajouter du côté des ghots)
+            NewDeadGhosts = Deaths.ghosts
+
+            % Ce pacman ne peut plus agir
+            StillAvailable=false
+        end
     in
         % Si le joueur est mort entretemps après son message , il ne peut plus agir
         % Petit check supplémentaire : empecher un pacman mort de "tricher" (s'il n'a plus de vie)
@@ -427,50 +477,18 @@ in
 
             % S'il y n'a pas des ennemis, on peut enregistrer sa position sans soucis
             if OpponentList == nil then
-                StillAvailable = true
-                NewFinallyDeathPacmans = FinallyDeathPacmans
-                NewDeadGhosts = Deaths.ghosts
-                NewDeadPacmans = Deaths.pacmans
-                NewNbPacmans = TempState.nbPacmans
-
-                % les andTimes
-                NewTimeGhosts = TempState.ghostsAndTime
-                NewTimePacmans = TempState.pacmansAndTime
-
-                % sa nouvelle position
-                NewCurrentPositions = {List.append Position#CurrentPlayer|nil 
-                                        {CurrentPositionsWithoutDeathPlayers LastKnownPosition CurrentPlayer|nil} }
+                {NoOpponentsFoundSetter StillAvailable NewFinallyDeathPacmans FinallyDeathPacmans 
+                NewDeadGhosts NewDeadPacmans NewNbPacmans NewTimeGhosts NewTimePacmans}
 
             else
+
                 % Selon le mode et notre type, on se fait tuer par le premier ennemi ou on tue tout le monde
                 if TempState.mode == classic then Victims PacmansNotDead in
                     % En mode normal, Le pacman se fait tuer par le premier ghost
                     if CheckPacmanType then KillerPlayer in
                         KillerPlayer = OpponentList.1
-
-                        % sous traitter les warnings aux joueurs concernées
-                        {HandlePacmansDeath PortGUI KillerPlayer Ghosts CurrentPlayer|nil nil nil Victims PacmansNotDead}
-
-                        % on le vire des positions courantes
-                        NewCurrentPositions = {CurrentPositionsWithoutDeathPlayers LastKnownPosition CurrentPlayer|nil}
-
-                        % On décrémente le nombre de pacmans selon le nombre d'éléments dans Victims
-                        NewNbPacmans = TempState.nbPacmans - {List.length Victims}
-
-                        % On rajoute cette nouvelles victime aux précédentes
-                        NewFinallyDeathPacmans = {List.append FinallyDeathPacmans Victims}
-
-                        % On rajoute ce pacman 
-                        NewTimePacmans = {List.append TempState.pacmansAndTime {List.map PacmansNotDead fun{$ X} TimestampVar#X  end}}
-
-                        % Les joueurs avec encore de la vie sont rajoutés
-                        NewDeadPacmans = {List.append Deaths.pacmans PacmansNotDead}
-
-                        % Aucun mort à rajouter du côté des ghots)
-                        NewDeadGhosts = Deaths.ghosts
-
-                        % Ce pacman ne peut plus agir
-                        StillAvailable=false
+                        {PacmanKilledByFirstGhost KillerPlayer NewCurrentPositions NewNbPacmans NewFinallyDeathPacmans 
+                        NewTimePacmans NewTimeGhosts NewDeadPacmans NewDeadGhosts StillAvailable}
 
                     % Le ghost tue tout les pacmans sur son chemin
                     else
@@ -489,6 +507,9 @@ in
 
                         % On rajoute ces pacmans 
                         NewTimePacmans = {List.append TempState.pacmansAndTime {List.map PacmansNotDead fun{$ X} TimestampVar#X  end}}
+
+                        % Pas de victime du côté des ghosts
+                        NewTimeGhosts = TempState.ghostsAndTime
 
                         % Les joueurs avec encore de la vie sont rajoutés
                         NewDeadPacmans = {List.append Deaths.pacmans PacmansNotDead}
