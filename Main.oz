@@ -21,6 +21,7 @@ define
    InitGame
    LaunchTurn
    LaunchSimultaneous
+   SimultaneousAgent
 in
    % Detect 
    fun{IsAPacman X}
@@ -127,12 +128,73 @@ in
         end
 
    end
+   
+   % Pour gérer le simulaneous ; il nous faut un agent qui récupère les ordres recues pour gérer la latence
+   % Il doit donc conserver un etat courant
+   fun{SimultaneousAgent NbPlayers StateWatcherPort}
+        Stream
+        Port
+        % Notre TreatStream
+        proc{TreatStream Stream ResultList NbCourant}
+            case Stream
+                % Enregistre l'action recu
+                of registerPosition(CurrentPlayer Position)|L then
+                    {TreatStream L CurrentPlayer#Position|ResultList NbCourant+1}
+                % Skip le tour de quelqu'un 
+                [] skipTurn|L then
+                    {TreatStream L ResultList NbCourant+1}
+                % Prévient notre agent StateWatcher si les conditions sont réunis (et set IsDone à true si c'est le cas)
+                [] sendMessages(IsDone)|L then
+                    if NbCourant == NbPlayers then
+                        % Envoi des messages à notre agent StateWatcher
+                        {ForAllProc ResultList proc{$ X} 
+                            case X
+                                of CurrentPlayer#Position then
+                                    % Sous traitter la gestion des mouvement dans StateWatcher
+                                    {Send StateWatcherPort move(CurrentPlayer Position)}
+                            else
+                                skip
+                            end
+                        end}
+                        {Browser.browse 'AIE TOUS ONT JOUE : '#ResultList}
+                        IsDone = true
+                        {TreatStream L nil 0}
+                    else
+                        IsDone = false
+                        {TreatStream L ResultList NbCourant}
+                    end
+            end
+        end
+   in
+        {NewPort Stream Port}
+        thread
+            {TreatStream Stream nil 0}
+        end
+        Port
+   end
 
    % Gere le Simultaneous
    % grace au treatstream ; le code ne change (structurellement parlant) presque pas du LaunchTurn
-   proc{LaunchSimultaneous Players StateWatcherPort}
+   proc{LaunchSimultaneous Players StateWatcherPort WaitAgentPort}
     % savoir si cela vaut la peine de refaire un tour de boucle
         IsFinished
+    % proc récursive qui ne fait qu'attendre jusqu'à que notre waitAgent renvoit true sendMessages
+    proc{MustAllWait}
+    % savoir si tout les joueurs ont pu répondre
+        IsDone
+    in
+        {Send WaitAgentPort sendMessages(IsDone)}
+
+        if IsDone then
+            % Uniquement à des fins de debug, j'update le numéro du tour
+            {Send StateWatcherPort increaseTurn}
+            % Appel récursif
+            {LaunchSimultaneous Players StateWatcherPort WaitAgentPort}
+        else
+            {MustAllWait}
+        end
+    end
+
     in
         % On checke les respawn et la fin du mode hunt 
         {Send StateWatcherPort checkTimers(IsFinished)}
@@ -141,27 +203,27 @@ in
             {Send StateWatcherPort displayWinner}
         else
 
-            thread
-                % On interroge de manière simultané tous les joueurs
-                {ForAllProc Players proc{$ CurrentPlayer}
-                    Position
-                in
-                    % envoi d'un message move ; ici grâce au CurrentPlayer on a déjà l'ID
-                    thread {Send CurrentPlayer.port move(_ Position)} end
+            % On interroge de manière simultané tous les joueurs
+            {ForAllProc Players proc{$ CurrentPlayer}
+                Position
+            in
+                % envoi d'un message move ; ici grâce au CurrentPlayer on a déjà l'ID
+                thread {Send CurrentPlayer.port move(_ Position)} end
 
-                    % Puisque nous sommes en Simultaneous ; on n'attend pas ce joueur
-                    if thread Position \= null end then
-                        % Sous traitter la gestion des mouvement dans StateWatcher
-                        {Send StateWatcherPort move(CurrentPlayer Position)}
-                    end
-                end}
-            end
+                % Puisque nous sommes en Simultaneous ; on n'attend pas ce joueur
+                if thread Position \= null end then
+                    {Send WaitAgentPort registerPosition(CurrentPlayer Position)}
+                end
 
-            % currentTime est resetté à l'heure courante
-            {Send StateWatcherPort increaseTime}
+                % En théorie un else suffirait mais je me méfie un dataflow random
+                if thread Position == null end then
+                    {Send WaitAgentPort skipTurn}
+                end
+            end}
 
-            % Appel récursif
-            {LaunchSimultaneous Players StateWatcherPort}
+            % Avant de recommencer, on s'assure que tous le monde a répondu avant de relancer
+            % Sinon notre GUI crame sévèrement
+            {MustAllWait}
         end
    end
    
@@ -353,7 +415,7 @@ in
         if Input.isTurnByTurn then
             {LaunchTurn Turn WatcherPort 1 Input.nbPacman+Input.nbGhost}
         else
-            {LaunchSimultaneous Players WatcherPort}
+            {LaunchSimultaneous Players WatcherPort {SimultaneousAgent Input.nbPacman+Input.nbGhost WatcherPort} }
         end
  
    end

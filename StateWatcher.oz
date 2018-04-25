@@ -678,7 +678,7 @@ in
   end
 
   proc{TreatStream Stream State}
-    {Browser.browse Stream.1}
+    % {Browser.browse Stream.1}
     case Stream
         of nil then skip
         
@@ -698,18 +698,11 @@ in
             {FindBestPlayer State.portGUI State.pacmans null null}
             {TreatStream T State}
         
-        % Incrémente son currentTime
-        [] increaseTime|T then
-            {TreatStream T {Record.adjoinList State [currentTime#{Time.time}]} }
-
         % Incremente le tour + set son currentTime
         [] increaseTurn|T then FinalState CurrentTurnNumber in
             % le tour courant
             CurrentTurnNumber = State.turnNumber
-            {Record.adjoinList State [
-                        turnNumber#CurrentTurnNumber+1
-                        currentTime#{Time.time}
-            ] FinalState}
+            {Record.adjoinList State [turnNumber#CurrentTurnNumber+1] FinalState}
             {TreatStream T FinalState}
         
         % Gére le mouvement d'un player

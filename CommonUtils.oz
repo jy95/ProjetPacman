@@ -2,7 +2,7 @@ functor
 import
    Input
    OS
-   Browser
+   % Browser
 export
    allowedMove:AllowedPosition
    sortValidMoves:SortValidMoves
