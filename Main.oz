@@ -3,7 +3,7 @@ import
    GUI
    Input
    PlayerManager
-   Browser
+   % Browser
    % Nos fonctions utilitaires
    CommonUtils
    % Nos fonctions de warning

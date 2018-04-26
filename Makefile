@@ -12,6 +12,7 @@ SOURCES=$(FILES:=.oz)
 OBJECTS=$(FILES:=.ozf)
 PICTURES_FOLDER=pics
 COMPILED_FOLDER=bin
+OTHER_PLAYERS_FOLDER=otherGroups
 COMPILED_FILES=$(addprefix $(COMPILED_FOLDER)/,$(FILES:=.ozf))
 MAIN_FILE=$(addprefix $(COMPILED_FOLDER)/,Main.ozf)
 
@@ -32,6 +33,7 @@ bin:
 copyPlayers: bin
 	$(COPY) Ghost055random.ozf $(addprefix $(COMPILED_FOLDER)/,Ghost055random.ozf)
 	$(COPY) Ghost055random.ozf $(addprefix $(COMPILED_FOLDER)/,Pacman055random.ozf)
+	cp -r $(addprefix $(OTHER_PLAYERS_FOLDER)/,.) $(COMPILED_FOLDER)
 
 # Compile tous les fichiers et stocker dans bin
 $(OBJECTS):	$(SOURCES)

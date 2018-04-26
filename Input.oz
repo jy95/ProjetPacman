@@ -86,7 +86,7 @@ in
 %%%%
 
    NbLives = 2
-   HuntTime = 5000
+   HuntTime = 5
    
 %%%% Players description %%%%
 

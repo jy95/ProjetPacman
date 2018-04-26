@@ -5,6 +5,9 @@ import
    Pacman055other
    Ghost055other
    Pacman055superSmart
+   % Les joueurs des autres groupes
+   Pacman080chaser
+   Ghost080chaser
 export
    playerGenerator:PlayerGenerator
 define
@@ -18,6 +21,9 @@ in
       [] pacman055other then {Pacman055other.portPlayer ID}
       [] pacman055superSmart then {Pacman055superSmart.portPlayer ID}
       [] ghost055other then {Ghost055other.portPlayer ID}
+      % Les joueurs des autres groupes
+      [] pacman080chaser then {Pacman080chaser.portPlayer ID}
+      [] ghost080chaser then {Ghost080chaser.portPlayer ID}
       end
    end
 end
