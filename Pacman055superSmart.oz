@@ -11,13 +11,11 @@ define
    TreatStream
    ChooseNextPosition
    TargetsStateModification
-   CalculateHeuristicClassic
-   CalculateHeuristicHunt
+   CalculateHeuristic
    CalculateHeuristicBonus
    CalculateHeuristicGhost
    CalculateHeuristicPoint
-   BestMoveClassic
-   BestMoveHunt
+   BestMove
 in
 
   % To handle new ghost or position of current ghost(s)
@@ -49,53 +47,42 @@ in
         end
    end
   
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  %Heuristic: Avoid Ghost, go in the direction of the bonuses, try eating points
-  fun {BestMoveClassic Moves Ghosts Bonus Answer Value}
+  %Heuristic: depends on the Mode
+  fun {BestMove Moves Ghosts Bonus Answer Points Mode Value}
     TempValue in
-    case Moves of H|T then TempValue={CalculateHeuristicClassic H Ghosts Bonus}
-                            if TempValue > Value then {BestMoveClassic T Ghosts Bonus H TempValue}
-                            else {BestMoveClassic T Ghosts Bonus Answer Value}
+    case Moves of H|T then TempValue={CalculateHeuristic H Ghosts Bonus Points Mode}
+                            if TempValue > Value then {BestMove T Ghosts Bonus H Points Mode TempValue}%This move is better
+                            else {BestMove T Ghosts Bonus Answer Points Mode Value}%The previous move is better
                             end
               [] nil then Answer
     end
   end
 
-  %Heuristic: Avoid Ghost, go in the direction of the bonuses, try eating points
-  fun {BestMoveHunt Moves Ghosts Bonus Answer Value}
-    TempValue in
-    case Moves of H|T then TempValue={CalculateHeuristicHunt H Ghosts Bonus}
-                            if TempValue > Value then {BestMoveHunt T Ghosts Bonus H TempValue}
-                            else {BestMoveHunt T Ghosts Bonus Answer Value}
-                            end
-              [] nil then Answer
-    end
-  end
-
-  fun {CalculateHeuristicHunt Position Ghosts Bonus}
+  fun {CalculateHeuristic Position Ghosts Bonus Points Mode}
       Temp in
-      Temp=~{CalculateHeuristicGhost Position Ghosts 0}+
-      {CalculateHeuristicBonus Position Bonus 0 0}+
-      {CalculateHeuristicPoint Position}
-      Temp
-  end
-  
-  fun {CalculateHeuristicClassic Position Ghosts Bonus}
-      Temp in
-      Temp={CalculateHeuristicGhost Position Ghosts 0}+
-      {CalculateHeuristicBonus Position Bonus 0 0}+
-      {CalculateHeuristicPoint Position}
+      if Mode == 0 then %Classic
+        Temp={CalculateHeuristicGhost Position Ghosts 0}+
+        {CalculateHeuristicBonus Position Bonus 0 0}+
+        {CalculateHeuristicPoint Position Points}
+      else %Hunt
+        Temp=~{CalculateHeuristicGhost Position Ghosts 0}+
+        {CalculateHeuristicBonus Position Bonus 0 0}+
+        {CalculateHeuristicPoint Position Points}
+      end
       Temp
   end
 
   %Heuristic about Points
-  fun {CalculateHeuristicPoint Position}
-    % {Value.hasFeature Points PositionAsInt} andthen Points.PositionAsInt == true ?
-    %TODO
-    0
+  %Points is the list of points up
+  %10 is an arbitrary value to be coherent with other heuristics
+  fun {CalculateHeuristicPoint Position Points}
+     if {List.member Position Points} then 10
+     else 0
+     end
   end
 
   %Heuristic about Ghost
+  %Avoid Ghosts
   %H(x)^2 to be logical with other heuristics
   fun {CalculateHeuristicGhost Position Ghosts Answer}
     case Ghosts 
@@ -106,6 +93,7 @@ in
   end
 
   %Heuristic about Bonus
+  %Being at distance d from both bonus is worse than being at d-1 from bonus1 and d+1 from bonus2
   %(Bonus1+Bonus2)^2 - (Bonus1^2 + Bonus2^2)
   fun {CalculateHeuristicBonus Position Bonus Dist1 Dist2}
   Temp Temp2 in
@@ -118,6 +106,7 @@ in
     end
   end
 
+  %Mannathan distance between two positions P1 and P2 of type pt(x:_ y:_)
   fun{Mannathan P1 P2}
     Temp1 Temp2 in
       if P1.x>P2.x then Temp1 = P1.x-P2.x
@@ -130,34 +119,35 @@ in
   end
 
    % A determinist way to decide which position should be taken by our pacman
-  fun{ChooseNextPosition Mode CurrentPosition Points Ghosts PositionsBonus}
-    {Browser.browse PositionsBonus}
+  fun{ChooseNextPosition Mode CurrentPosition Ghosts PositionsBonus PositionsPoints}
+
     % X = column et Y = row
     CurrentPositionX = CurrentPosition.x
     CurrentPositionY = CurrentPosition.y
-    % les mouvements possibles
+
+    % Possible moves
     Left = pt(x: CurrentPositionX-1 y: CurrentPositionY)
     Right = pt(x: CurrentPositionX+1 y: CurrentPositionY)
     Up = pt(x: CurrentPositionX y: CurrentPositionY-1)
     Down = pt(x: CurrentPositionX y: CurrentPositionY+1)
 
+    %Self Wrapping map
     WrappingMoves = {CommonUtils.wrappingMoves [Left Right Up Down] nil}
 
-    % seulement les mouvement valides
+    % Valid moves
     ValidMoves = {CommonUtils.sortValidMoves WrappingMoves }
   in
-    % Retrieve all the positions hold by ghost
     case Mode
-      % in classical mode : take the best bonus available if there is no ghost in this
-      of classic then
-        
+      % Classic: Avoid Ghost, go to the bonuses and favorize points eating
+      of classic then      
         {Delay 500}
-        %{Delay 50}
-        {BestMoveClassic ValidMoves Ghosts PositionsBonus.true ValidMoves.1 {CalculateHeuristicClassic ValidMoves.1 Ghosts PositionsBonus.true}}
-        %{BestBonusAvailable ValidMoves Points Bonus Ghosts 0 CurrentPosition}
-      % in hunt mode : simply eat the closest ghost to us
+
+        {BestMove ValidMoves Ghosts PositionsBonus.true ValidMoves.1 PositionsPoints.true 0 {CalculateHeuristic ValidMoves.1 Ghosts PositionsBonus.true PositionsPoints.true 0}}
+
+
+      % Hunt: Go to eat ghost, go to the bonuses and favorize points eating
       [] hunt then
-        {BestMoveHunt ValidMoves Ghosts PositionsBonus.true ValidMoves.1 {CalculateHeuristicHunt ValidMoves.1 Ghosts PositionsBonus.true}}
+        {BestMove ValidMoves Ghosts PositionsBonus.true ValidMoves.1 PositionsPoints.true 1 {CalculateHeuristic ValidMoves.1 Ghosts PositionsBonus.true PositionsPoints.true 1}}
     end
   end
 
@@ -167,25 +157,25 @@ in
   in
       {NewPort Stream Port}
       thread
-	 {TreatStream Stream ID classic 0 playerState(life: Input.nbLives currentScore: 0 spawn: nil currentPosition: nil) 
-   points() nil positions(true:nil false:nil)}
+	 {TreatStream Stream ID classic 0 playerState(life: Input.nbLives currentScore: 0 spawn: nil currentPosition: nil)
+    nil positions(true:nil false:nil) positions(true:nil false:nil)}
       end
       Port
   end
   % has as many parameters as you want
-   proc{TreatStream Stream PacmanID Mode OnBoard PlayerState PointsSpawn  GhostsSpawn PositionsBonus}
+   proc{TreatStream Stream PacmanID Mode OnBoard PlayerState GhostsSpawn PositionsBonus PositionsPoints}
       case Stream 
       of nil then skip
       
       % getId(?ID): Ask the pacman for its <pacman> ID.
       [] getId(ID)|T then
           ID = PacmanID
-          {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn GhostsSpawn PositionsBonus}
+          {TreatStream T PacmanID Mode OnBoard PlayerState GhostsSpawn PositionsBonus PositionsPoints}
       
       % assignSpawn(P): Assign the <position> P as the spawn of the pacman.
       [] assignSpawn(P)|T then NextPlayerState in
           {Record.adjoinAt PlayerState spawn P NextPlayerState}
-          {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn GhostsSpawn PositionsBonus}
+          {TreatStream T PacmanID Mode OnBoard NextPlayerState GhostsSpawn PositionsBonus PositionsPoints}
       
       % spawn(?ID ?P): Spawn the pacman on the board. The pacman should answer its <pacman> ID
       % and its <position> P (which should be the same as the one assigned as spawn. This action is
@@ -198,11 +188,11 @@ in
           {Record.adjoinAt PlayerState currentPosition Position NextPlayerState}
           ID = PacmanID
           P = Position
-          {TreatStream T PacmanID Mode 1 NextPlayerState PointsSpawn GhostsSpawn PositionsBonus}
+          {TreatStream T PacmanID Mode 1 NextPlayerState GhostsSpawn PositionsBonus PositionsPoints}
         else
           ID = null
           P = null
-          {TreatStream T PacmanID Mode 1 PlayerState PointsSpawn GhostsSpawn PositionsBonus}
+          {TreatStream T PacmanID Mode 1 PlayerState GhostsSpawn PositionsBonus PositionsPoints}
         end
 
       % move(?ID ?P): Ask the pacman to chose its next <position> P (pacman is thus aware of its
@@ -216,7 +206,7 @@ in
             end
             CurrentPosition = PlayerState.currentPosition
             % On choisit la prochaine destination
-            NextPosition = {ChooseNextPosition Mode CurrentPosition PointsSpawn GhostsSpawn PositionsBonus}
+            NextPosition = {ChooseNextPosition Mode CurrentPosition GhostsSpawn PositionsBonus PositionsPoints}
             % Cela prend un peu de temps donc on va attendre la fin avant de setter P 
             {Wait NextPosition}
             {Record.adjoinAt PlayerState currentPosition NextPosition NextPlayerState}
@@ -224,44 +214,54 @@ in
 
             P = NextPosition
             ID = PacmanID
-            {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn GhostsSpawn PositionsBonus}
+            {TreatStream T PacmanID Mode OnBoard NextPlayerState GhostsSpawn PositionsBonus PositionsPoints}
         else
             P = null
             ID = null
-            {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn GhostsSpawn PositionsBonus}
+            {TreatStream T PacmanID Mode OnBoard PlayerState  GhostsSpawn PositionsBonus PositionsPoints}
         end
       
       % bonusSpawn(P): Inform that a bonus has spawn at <position> P
       [] bonusSpawn(P)|T then PositionBonusTrue PositionBonusFalse NextPositionsBonusFalse NextPositionsBonus in
-        %TODO
+
         PositionBonusFalse = {List.subtract PositionsBonus.false P} %Enleve le bonus de la liste faux
         PositionBonusTrue = {List.append [P] PositionsBonus.true}% Ajoute le bonus a la liste vrai
-        %
+
         {Record.adjoinAt PositionsBonus false PositionBonusFalse NextPositionsBonusFalse}%Update le record avec false
         {Record.adjoinAt NextPositionsBonusFalse true PositionBonusTrue NextPositionsBonus}%update le record avec vrai
 
-        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn GhostsSpawn NextPositionsBonus}
+        {TreatStream T PacmanID Mode OnBoard PlayerState GhostsSpawn NextPositionsBonus PositionsPoints}
       
       % pointSpawn(P): Inform that a point has spawn at <position> P
-      [] pointSpawn(P)|T then NextPointSpawn in
-        {Record.adjoinAt PointsSpawn {CommonUtils.positionToInt P} true NextPointSpawn}
-        {TreatStream T PacmanID Mode OnBoard PlayerState NextPointSpawn GhostsSpawn PositionsBonus}
+      [] pointSpawn(P)|T then PositionsPointsTrue PositionsPointsFalse NextPositionsPointsFalse NextPositionsPoints in
+
+        PositionsPointsFalse = {List.subtract PositionsPoints.false P} %Enleve le point de la liste faux
+        PositionsPointsTrue = {List.append [P] PositionsPoints.true}% Ajoute le point a la liste vrai
+        
+        {Record.adjoinAt PositionsPoints false PositionsPointsFalse NextPositionsPointsFalse}%Update le record avec false
+        {Record.adjoinAt NextPositionsPointsFalse true PositionsPointsTrue NextPositionsPoints}%update le record avec vrai
+
+        {TreatStream T PacmanID Mode OnBoard PlayerState GhostsSpawn PositionsBonus NextPositionsPoints}
 
       % bonusRemoved(P): Inform that a bonus has disappear from <position> P, doesn’t say who eat it.
-      [] bonusRemoved(P)|T then PositionBonusTrue PositionBonusFalse NextPositionsBonusFalse NextPositionsBonus in
-        %TODO
+      [] bonusRemoved(P)|T then PositionsBonusTrue PositionBonusFalse NextPositionsBonusFalse NextPositionsBonus in
         PositionBonusFalse = {List.append [P] PositionsBonus.false} %Enleve le bonus de la liste faux
-        PositionBonusTrue = {List.subtract PositionsBonus.true P}% Ajoute le bonus a la liste vrai
-        %
+        PositionsBonusTrue = {List.subtract PositionsBonus.true P}% Ajoute le bonus a la liste vrai
+        
         {Record.adjoinAt PositionsBonus false PositionBonusFalse NextPositionsBonusFalse}%Update le record avec false
-        {Record.adjoinAt NextPositionsBonusFalse true PositionBonusTrue NextPositionsBonus}%update le record avec vrai
+        {Record.adjoinAt NextPositionsBonusFalse true PositionsBonusTrue NextPositionsBonus}%update le record avec vrai
        
-        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn GhostsSpawn NextPositionsBonus}
+        {TreatStream T PacmanID Mode OnBoard PlayerState GhostsSpawn NextPositionsBonus PositionsPoints}
       
       % pointRemoved(P): Inform that a point has disappear from <position> P, doesn’t say who eat it.
-      [] pointRemoved(P)|T then NextPointSpawn in
-        {Record.adjoinAt PointsSpawn {CommonUtils.positionToInt P} false NextPointSpawn}
-        {TreatStream T PacmanID Mode OnBoard PlayerState NextPointSpawn GhostsSpawn PositionsBonus}
+      [] pointRemoved(P)|T then PositionsPointsTrue PositionsPointsFalse NextPositionsPointsFalse NextPositionsPoints in
+        PositionsPointsFalse = {List.append [P] PositionsPoints.false} %Enleve le bonus de la liste faux
+        PositionsPointsTrue = {List.subtract PositionsPoints.true P}% Ajoute le bonus a la liste vrai
+        
+        {Record.adjoinAt PositionsPoints false PositionsPointsFalse NextPositionsPointsFalse}%Update le record avec false
+        {Record.adjoinAt NextPositionsPointsFalse true PositionsPointsTrue NextPositionsPoints}%update le record avec vrai
+        
+        {TreatStream T PacmanID Mode OnBoard PlayerState GhostsSpawn PositionsBonus NextPositionsPoints}
 
       % addPoint(Add ?ID ?NewScore): Inform that the pacman has gain the number of points given
       % in Add, and ask you your <pacman> ID and the NewScore you have.
@@ -269,7 +269,7 @@ in
         NewScore = PlayerState.currentScore + Add
         ID = PacmanID
         {Record.adjoinAt PlayerState currentScore NewScore NextPlayerState}
-        {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn GhostsSpawn PositionsBonus}
+        {TreatStream T PacmanID Mode OnBoard NextPlayerState GhostsSpawn PositionsBonus PositionsPoints}
 
       % gotKilled(?ID ?NewLife ?NewScore): Inform that the pacman has lost a life and pass it out
       % of the board. Ask him its <pacman> ID, its new number of lives in NewLife and its new score
@@ -279,12 +279,12 @@ in
         NewLife = PlayerState.life - 1
         ID = PacmanID
         {Record.adjoinList PlayerState [currentScore#NewScore life#NewLife] NextPlayerState}
-        {TreatStream T PacmanID Mode 0 NextPlayerState PointsSpawn nil PositionsBonus}
+        {TreatStream T PacmanID Mode 0 NextPlayerState nil PositionsBonus PositionsPoints}
       
       % ghostPos(ID P): Inform that the ghost with <ghost> ID is now at <position> P.
       [] ghostPos(ID P)|T then
-        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn 
-        {TargetsStateModification GhostsSpawn update(ID P)} PositionsBonus}
+        {TreatStream T PacmanID Mode OnBoard PlayerState
+        {TargetsStateModification GhostsSpawn update(ID P)} PositionsBonus PositionsPoints}
 
       % killGhost(IDg ?IDp ?NewScore): Inform that the ghost with <ghost> IDg has been killed by you. 
       % Ask you your <pacman> IDp back and your NewScore (since killing a ghost make you gain points).
@@ -292,21 +292,21 @@ in
         NewScore = PlayerState.currentScore + Input.rewardKill
         IDp = PacmanID
         {Record.adjoinAt PlayerState currentScore NewScore NextPlayerState}
-        {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn  
-        {TargetsStateModification GhostsSpawn remove(IDg)} PositionsBonus}
+        {TreatStream T PacmanID Mode OnBoard NextPlayerState   
+        {TargetsStateModification GhostsSpawn remove(IDg)} PositionsBonus PositionsPoints}
         
       % deathGhost(ID): Inform that the ghost with <ghost> ID has been killed (by someone, you or another pacman).
       [] deathGhost(ID)|T then
-        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn  
-        {TargetsStateModification GhostsSpawn remove(ID)} PositionsBonus}
+        {TreatStream T PacmanID Mode OnBoard PlayerState 
+        {TargetsStateModification GhostsSpawn remove(ID)} PositionsBonus PositionsPoints}
 
       % setMode(M): Inform the new <mode> M.
       [] setMode(M)|T then
-        {TreatStream T PacmanID M OnBoard PlayerState PointsSpawn GhostsSpawn PositionsBonus}
+        {TreatStream T PacmanID M OnBoard PlayerState GhostsSpawn PositionsBonus PositionsPoints}
 
       [] M|T then
         {Browser.browse 'unsupported message from pacman'#M}
-        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn  GhostsSpawn PositionsBonus}
+        {TreatStream T PacmanID Mode OnBoard PlayerState  GhostsSpawn PositionsBonus PositionsPoints}
       end
    end
 end

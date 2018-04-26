@@ -1,10 +1,10 @@
 functor
 import
-   Pacman000random
-   Ghost000random
-   Pacman000other
-   Ghost000other
-   Pacman000superSmart
+   Pacman055random
+   Ghost055random
+   Pacman055other
+   Ghost055other
+   Pacman055superSmart
 export
    playerGenerator:PlayerGenerator
 define
@@ -13,11 +13,11 @@ in
    % Kind is one valid name to describe the wanted player, ID is either the <pacman> ID, either the <ghost> ID corresponding to the player
    fun{PlayerGenerator Kind ID}
       case Kind
-      of pacman000random then {Pacman000random.portPlayer ID}
-      [] ghost000random then {Ghost000random.portPlayer ID}
-      [] pacman000other then {Pacman000other.portPlayer ID}
-      [] pacman000superSmart then {Pacman000superSmart.portPlayer ID}
-      [] ghost000other then {Ghost000other.portPlayer ID}
+      of pacman055random then {Pacman055random.portPlayer ID}
+      [] ghost055random then {Ghost055random.portPlayer ID}
+      [] pacman055other then {Pacman055other.portPlayer ID}
+      [] pacman055superSmart then {Pacman055superSmart.portPlayer ID}
+      [] ghost055other then {Ghost055other.portPlayer ID}
       end
    end
 end
