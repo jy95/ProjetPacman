@@ -12,7 +12,6 @@ define
    ChooseNextPosition
    TargetsStateModification
    CalculateHeuristic
-   CalculateHeuristicBonus
    CalculateHeuristicGhost
    CalculateHeuristicPoint
    BestMove
@@ -48,7 +47,7 @@ in
    end
   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  %Heuristic: Avoid Ghost, go in the direction of the bonuses, try eating points
+  %Heuristic: Avoid Ghost
   fun {BestMove Moves Ghosts Bonus Answer Points Mode Value}
     TempValue in
     case Moves of H|T then TempValue={CalculateHeuristic H Ghosts Bonus Points Mode}
@@ -60,17 +59,13 @@ in
   end
 
   fun {CalculateHeuristic Position Ghosts Bonus Points Mode}
-      Temp T1 T2 T3 in
+      Temp in
       if Mode == 0 then %Classic
-       T1={CalculateHeuristicGhost Position Ghosts 0}
-       T2= {CalculateHeuristicBonus Position Bonus 0 0}
-       T3= {CalculateHeuristicPoint Position Points}
-       Temp= T1+T2+T3
+        Temp={CalculateHeuristicGhost Position Ghosts 0}+
+        {CalculateHeuristicPoint Position Points}
       else %Hunt
-        T1=~{CalculateHeuristicGhost Position Ghosts 0}
-        T2={CalculateHeuristicBonus Position Bonus 0 0}
-        T3={CalculateHeuristicPoint Position Points}
-        Temp= T1+T2+T3
+        Temp=~{CalculateHeuristicGhost Position Ghosts 0}+
+        {CalculateHeuristicPoint Position Points}
       end
       Temp
   end
@@ -92,20 +87,6 @@ in
       of H|T then 
       {CalculateHeuristicGhost Position T Answer+{Mannathan Position H.position}}
       [] nil then Answer*Answer %Positive answer
-    end
-  end
-
-  %Heuristic about Bonus
-  %Being at distance d from both bonus is worse than being at d-1 from bonus1 and d+1 from bonus2
-  %(Bonus+Bonus2)^2 - (Bonus1^2 + Bonus2^2)
-  fun {CalculateHeuristicBonus Position Bonus Dist1 Dist2}
-  Temp Temp2 in
-    case Bonus     
-      of H|T then
-      Temp = {Mannathan Position H}
-      Temp2= Temp*Temp
-      {CalculateHeuristicBonus Position T Dist1+Temp Dist2+Temp2}
-      [] nil then ~(Dist1*Dist1 - Dist2) %Negative answer
     end
   end
 

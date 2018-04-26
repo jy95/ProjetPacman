@@ -5,6 +5,7 @@ import
    Pacman055other
    Ghost055other
    Pacman055superSmart
+   Pacman055superShy
 
    % Les joueurs des autres groupes
    Pacman080chaser
@@ -28,6 +29,7 @@ in
       [] pacman055other then {Pacman055other.portPlayer ID}
       [] pacman055superSmart then {Pacman055superSmart.portPlayer ID}
       [] ghost055other then {Ghost055other.portPlayer ID}
+      [] pacman055superShy then {Pacman055superShy.portPlayer ID}
      
 
       % Les joueurs des autres groupes
