@@ -60,11 +60,11 @@ in
   fun {CalculateHeuristic Position Ghosts Bonus Points Mode}
       Temp in
       if Mode == 0 then %Classic
-        Temp={CalculateHeuristicItems Position Ghosts 0 0 {List.length Ghosts}}-
+        Temp=10*{CalculateHeuristicItems Position Ghosts 0 0 {List.length Ghosts}}-
         {CalculateHeuristicItems Position Bonus 0 0 {List.length Bonus}}+
         {CalculateHeuristicPoint Position Points}
       else %Hunt
-        Temp=~{CalculateHeuristicItems Position Ghosts 0 0 {List.length Ghosts}}-
+        Temp=~10*{CalculateHeuristicItems Position Ghosts 0 0 {List.length Ghosts}}-
         {CalculateHeuristicItems Position Bonus 0 0 {List.length Bonus}}+
         {CalculateHeuristicPoint Position Points}
       end
