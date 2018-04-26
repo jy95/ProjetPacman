@@ -598,13 +598,13 @@ in
                     {WarningFunctions.setMode PortGUI hunt Pacmans Ghosts}
                     % prévenir tous les joueurs du changement de mode
                     {WarningFunctions.hideBonus PortGUI Position Pacmans}
-
+                    
                     % mettre cette position comme off
                     NewMode = hunt
                     NewBonusOff =  Position|BonusOff
                     NewPointsOff = PointsOff
                     % Selon le mode on stocke soit Time.time ou le tour du bonus
-                    NewBonusTime = if Input.isTurnByTurn then TempState.bonusTime else {Time.time} end
+                    NewBonusTime = if Input.isTurnByTurn then TempState.turnNumber else {Time.time} end
                     
                     % Sans oublier d'enregistrer cette action
                     NewTimePoints = TempState.pointsAndTime
@@ -629,6 +629,10 @@ in
                 NewTimePoints = TempState.pointsAndTime
             end
             
+            {Browser.browse 'currentState'#[
+                bonusTime#NewBonusTime
+             ]}
+
             % Update du final state
              {Record.adjoinList TempState [
                 % à voir si on conserve
