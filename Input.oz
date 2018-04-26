@@ -86,7 +86,11 @@ in
 %%%%
 
    NbLives = 2
+<<<<<<< HEAD
    HuntTime = 500
+=======
+   HuntTime = 5
+>>>>>>> d5fb90f9a0db2cc16c8e0ec298847cf825b8fc7e
    
 %%%% Players description %%%%
 
