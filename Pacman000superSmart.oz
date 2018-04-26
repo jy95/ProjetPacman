@@ -122,13 +122,12 @@ in
   end
 
   %Heuristic about Ghost
+  %H(x)^2 to be logical with other heuristics
   fun {CalculateHeuristicGhost Position Ghosts Answer}
     case Ghosts 
       of H|T then 
-      
-      0
-      %{CalculateHeuristicGhost Position T Answer+{CommonUtils.distanceBetween Position Position}}
-      [] nil then Answer %Positive answer
+      {CalculateHeuristicGhost Position T Answer+{Mannathan Position H.position}}
+      [] nil then Answer*Answer %Positive answer
     end
   end
 
@@ -159,7 +158,8 @@ in
   end
 
    % A determinist way to decide which position should be taken by our pacman
-  fun{ChooseNextPosition Mode CurrentPosition Points Bonus Ghosts}
+  fun{ChooseNextPosition Mode CurrentPosition Points Bonus Ghosts BonusPositions}
+    {Browser.browse BonusPositions}
     % X = column et Y = row
     CurrentPositionX = CurrentPosition.x
     CurrentPositionY = CurrentPosition.y
@@ -245,24 +245,24 @@ in
       {NewPort Stream Port}
       thread
 	 {TreatStream Stream ID classic 0 playerState(life: Input.nbLives currentScore: 0 spawn: nil currentPosition: nil) 
-   points() bonus() nil}
+   points() bonus() nil positions(true:nil false:nil)}
       end
       Port
   end
   % has as many parameters as you want
-   proc{TreatStream Stream PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn GhostsSpawn}
+   proc{TreatStream Stream PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn GhostsSpawn PositionsBonus}
       case Stream 
       of nil then skip
       
       % getId(?ID): Ask the pacman for its <pacman> ID.
       [] getId(ID)|T then
           ID = PacmanID
-          {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn GhostsSpawn}
+          {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn GhostsSpawn PositionsBonus}
       
       % assignSpawn(P): Assign the <position> P as the spawn of the pacman.
       [] assignSpawn(P)|T then NextPlayerState in
           {Record.adjoinAt PlayerState spawn P NextPlayerState}
-          {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn BonusSpawn GhostsSpawn}
+          {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn BonusSpawn GhostsSpawn PositionsBonus}
       
       % spawn(?ID ?P): Spawn the pacman on the board. The pacman should answer its <pacman> ID
       % and its <position> P (which should be the same as the one assigned as spawn. This action is
@@ -275,11 +275,11 @@ in
           {Record.adjoinAt PlayerState currentPosition Position NextPlayerState}
           ID = PacmanID
           P = Position
-          {TreatStream T PacmanID Mode 1 NextPlayerState PointsSpawn BonusSpawn GhostsSpawn}
+          {TreatStream T PacmanID Mode 1 NextPlayerState PointsSpawn BonusSpawn GhostsSpawn PositionsBonus}
         else
           ID = null
           P = null
-          {TreatStream T PacmanID Mode 1 PlayerState PointsSpawn BonusSpawn GhostsSpawn}
+          {TreatStream T PacmanID Mode 1 PlayerState PointsSpawn BonusSpawn GhostsSpawn PositionsBonus}
         end
 
       % move(?ID ?P): Ask the pacman to chose its next <position> P (pacman is thus aware of its
@@ -293,7 +293,7 @@ in
             end
             CurrentPosition = PlayerState.currentPosition
             % On choisit la prochaine destination
-            NextPosition = {ChooseNextPosition Mode CurrentPosition PointsSpawn BonusSpawn GhostsSpawn}
+            NextPosition = {ChooseNextPosition Mode CurrentPosition PointsSpawn BonusSpawn GhostsSpawn PositionsBonus}
             % Cela prend un peu de temps donc on va attendre la fin avant de setter P 
             {Wait NextPosition}
             {Record.adjoinAt PlayerState currentPosition NextPosition NextPlayerState}
@@ -301,32 +301,47 @@ in
 
             P = NextPosition
             ID = PacmanID
-            {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn BonusSpawn GhostsSpawn}
+            {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn BonusSpawn GhostsSpawn PositionsBonus}
         else
             P = null
             ID = null
-            {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn GhostsSpawn}
+            {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn GhostsSpawn PositionsBonus}
         end
       
       % bonusSpawn(P): Inform that a bonus has spawn at <position> P
-      [] bonusSpawn(P)|T then NextBonusSpawn in
+      [] bonusSpawn(P)|T then NextBonusSpawn PositionBonusTrue PositionBonusFalse NextPositionsBonusFalse NextPositionsBonus in
         {Record.adjoinAt BonusSpawn {CommonUtils.positionToInt P} true NextBonusSpawn}
-        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn NextBonusSpawn GhostsSpawn}
+        %TODO
+        PositionBonusFalse = {List.subtract PositionsBonus.false P} %Enleve le bonus de la liste faux
+        PositionBonusTrue = {List.append [P] PositionsBonus.true}% Ajoute le bonus a la liste vrai
+        %
+        {Record.adjoinAt PositionsBonus false PositionBonusFalse NextPositionsBonusFalse}%Update le record avec false
+        {Record.adjoinAt NextPositionsBonusFalse true PositionBonusTrue NextPositionsBonus}%update le record avec vrai
+
+        {Browser.browse NextPositionsBonus}
+        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn NextBonusSpawn GhostsSpawn NextPositionsBonus}
       
       % pointSpawn(P): Inform that a point has spawn at <position> P
       [] pointSpawn(P)|T then NextPointSpawn in
         {Record.adjoinAt PointsSpawn {CommonUtils.positionToInt P} true NextPointSpawn}
-        {TreatStream T PacmanID Mode OnBoard PlayerState NextPointSpawn BonusSpawn GhostsSpawn}
+        {TreatStream T PacmanID Mode OnBoard PlayerState NextPointSpawn BonusSpawn GhostsSpawn PositionsBonus}
 
       % bonusRemoved(P): Inform that a bonus has disappear from <position> P, doesn’t say who eat it.
-      [] bonusRemoved(P)|T then NextBonusSpawn in
-        {Record.adjoinAt BonusSpawn {CommonUtils.positionToInt P} false NextBonusSpawn}
-        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn NextBonusSpawn GhostsSpawn}
+      [] bonusRemoved(P)|T then NextBonusSpawn PositionBonusTrue PositionBonusFalse NextPositionsBonusFalse NextPositionsBonus in
+        %TODO
+        PositionBonusFalse = {List.append [P] PositionsBonus.false} %Enleve le bonus de la liste faux
+        PositionBonusTrue = {List.subtract PositionsBonus.true P}% Ajoute le bonus a la liste vrai
+        %
+        {Record.adjoinAt PositionsBonus false PositionBonusFalse NextPositionsBonusFalse}%Update le record avec false
+        {Record.adjoinAt NextPositionsBonusFalse true PositionBonusTrue NextPositionsBonus}%update le record avec vrai
+       
+        {Browser.browse NextPositionsBonus}
+        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn NextBonusSpawn GhostsSpawn NextPositionsBonus}
       
       % pointRemoved(P): Inform that a point has disappear from <position> P, doesn’t say who eat it.
       [] pointRemoved(P)|T then NextPointSpawn in
         {Record.adjoinAt PointsSpawn {CommonUtils.positionToInt P} false NextPointSpawn}
-        {TreatStream T PacmanID Mode OnBoard PlayerState NextPointSpawn BonusSpawn GhostsSpawn}
+        {TreatStream T PacmanID Mode OnBoard PlayerState NextPointSpawn BonusSpawn GhostsSpawn PositionsBonus}
 
       % addPoint(Add ?ID ?NewScore): Inform that the pacman has gain the number of points given
       % in Add, and ask you your <pacman> ID and the NewScore you have.
@@ -334,7 +349,7 @@ in
         NewScore = PlayerState.currentScore + Add
         ID = PacmanID
         {Record.adjoinAt PlayerState currentScore NewScore NextPlayerState}
-        {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn BonusSpawn GhostsSpawn}
+        {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn BonusSpawn GhostsSpawn PositionsBonus}
 
       % gotKilled(?ID ?NewLife ?NewScore): Inform that the pacman has lost a life and pass it out
       % of the board. Ask him its <pacman> ID, its new number of lives in NewLife and its new score
@@ -344,12 +359,12 @@ in
         NewLife = PlayerState.life - 1
         ID = PacmanID
         {Record.adjoinList PlayerState [currentScore#NewScore life#NewLife] NextPlayerState}
-        {TreatStream T PacmanID Mode 0 NextPlayerState PointsSpawn BonusSpawn nil}
+        {TreatStream T PacmanID Mode 0 NextPlayerState PointsSpawn BonusSpawn nil PositionsBonus}
       
       % ghostPos(ID P): Inform that the ghost with <ghost> ID is now at <position> P.
       [] ghostPos(ID P)|T then
         {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn 
-        {TargetsStateModification GhostsSpawn update(ID P)}}
+        {TargetsStateModification GhostsSpawn update(ID P)} PositionsBonus}
 
       % killGhost(IDg ?IDp ?NewScore): Inform that the ghost with <ghost> IDg has been killed by you. 
       % Ask you your <pacman> IDp back and your NewScore (since killing a ghost make you gain points).
@@ -358,20 +373,20 @@ in
         IDp = PacmanID
         {Record.adjoinAt PlayerState currentScore NewScore NextPlayerState}
         {TreatStream T PacmanID Mode OnBoard NextPlayerState PointsSpawn BonusSpawn 
-        {TargetsStateModification GhostsSpawn remove(IDg)}}
+        {TargetsStateModification GhostsSpawn remove(IDg)} PositionsBonus}
         
       % deathGhost(ID): Inform that the ghost with <ghost> ID has been killed (by someone, you or another pacman).
       [] deathGhost(ID)|T then
         {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn 
-        {TargetsStateModification GhostsSpawn remove(ID)}}
+        {TargetsStateModification GhostsSpawn remove(ID)} PositionsBonus}
 
       % setMode(M): Inform the new <mode> M.
       [] setMode(M)|T then
-        {TreatStream T PacmanID M OnBoard PlayerState PointsSpawn BonusSpawn GhostsSpawn}
+        {TreatStream T PacmanID M OnBoard PlayerState PointsSpawn BonusSpawn GhostsSpawn PositionsBonus}
 
       [] M|T then
         {Browser.browse 'unsupported message from pacman'#M}
-        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn GhostsSpawn}
+        {TreatStream T PacmanID Mode OnBoard PlayerState PointsSpawn BonusSpawn GhostsSpawn PositionsBonus}
       end
    end
 end
