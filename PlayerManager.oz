@@ -5,6 +5,8 @@ import
    Pacman055other
    Ghost055other
    Pacman055superSmart
+   Pacman001other
+   Ghost001other
 export
    playerGenerator:PlayerGenerator
 define
@@ -18,6 +20,8 @@ in
       [] pacman055other then {Pacman055other.portPlayer ID}
       [] pacman055superSmart then {Pacman055superSmart.portPlayer ID}
       [] ghost055other then {Ghost055other.portPlayer ID}
+      [] ghost001other then {Ghost001other.portPlayer ID}
+      [] pacman001other then {Pacman001other.portPlayer ID}
       end
    end
 end
