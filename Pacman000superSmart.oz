@@ -107,7 +107,7 @@ in
   fun {CalculateHeuristic Position Ghosts Bonus}
       Temp in
       Temp={CalculateHeuristicGhost Position Ghosts 0}+
-      {CalculateHeuristicBonus Position Bonus 0}+
+      {CalculateHeuristicBonus Position Bonus 0 0}+
       {CalculateHeuristicPoint Position}
       %{Browser.browse Temp}
       Temp
@@ -133,16 +133,19 @@ in
   end
 
   %Heuristic about Bonus
-  fun {CalculateHeuristicBonus Position Bonus Answer}
-  Temp in
-    case Bonus
-     
+  %(Bonus1+Bonus2)^2 - (Bonus1^2 + Bonus2^2)
+  fun {CalculateHeuristicBonus Position Bonus Dist1 Dist2}
+  Temp Temp2 in
+    case Bonus     
       of H|T then
       Temp = {Mannathan Position H}
-      {CalculateHeuristicBonus Position T Answer-Temp}
-      [] nil then Answer %Negative answser
+      Temp2= Temp*Temp
+      {CalculateHeuristicBonus Position T Dist1+Temp Dist2+Temp2}
+      [] nil then ~(Dist1*Dist1 - Dist2) %Negative answer
     end
   end
+
+
 
   fun{Mannathan P1 P2}
     Temp1 Temp2 in
@@ -182,7 +185,7 @@ in
       % in classical mode : take the best bonus available if there is no ghost in this
       of classic then
         
-        %{Delay 50}
+        {Delay 500}
         ExplorerMap = thread {PositionExtractor Input.map 1} end
         Bonuses= {FilterTile ExplorerMap fun{$ E} E == 4 end }
         %{Browser.browse Bonuses}
