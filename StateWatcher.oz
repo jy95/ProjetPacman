@@ -135,14 +135,11 @@ in
             {WarningFunctions.spawnAllGhosts PortGUI GhostsD Pacmans}
 
             % 2. vérification : le huntTime (si le mode était hunt)
-            if CurrentState.mode == hunt then
+            if CurrentState.mode == hunt andthen {Value.isDet CurrentState.bonusTime} == true  then
                 % si le bonus time est expiré
                 if {CheckTimer TurnNumber Input.huntTime CurrentState.bonusTime} then
                     NewMode = classic
-                    % Si on était en mode bonus , il faut prévenir du changement
-                    if CurrentState.mode \= classic then
-                        {WarningFunctions.setMode PortGUI classic Pacmans Ghosts}
-                    end
+                    {WarningFunctions.setMode PortGUI classic Pacmans Ghosts}
                 else
                     NewMode = CurrentState.mode
                 end
@@ -525,6 +522,7 @@ in
                     % En mode bonus, le nombre de pacmans reste le même
                     NewNbPacmans = TempState.nbPacmans
                     NewDeadPacmans = Deaths.pacmans
+                    NewTimePacmans = TempState.pacmansAndTime
                     NewFinallyDeathPacmans = FinallyDeathPacmans
 
                     % Le pacman tue tout les ghosts

@@ -91,7 +91,7 @@ in
    proc{LaunchTurn Turn StateWatcherPort CountT NbPlayers}
         % savoir si cela vaut la peine de refaire un tour de boucle
         IsFinished
-   in
+   in     
         % On checke les respawn et la fin du mode hunt 
         {Send StateWatcherPort checkTimers(IsFinished)}
 
@@ -102,7 +102,7 @@ in
             case Turn
                 of CurrentPlayer|T then Position in               
                     % Pour débug ; delai de 5s
-                    {Delay 500}
+                    %{Delay 500}
                     % envoi d'un message move ; ici grâce au CurrentPlayer on a déjà l'ID
                     {Send CurrentPlayer.port move(_ Position)}
 
@@ -155,7 +155,7 @@ in
                                 skip
                             end
                         end}
-                        {Browser.browse 'AIE TOUS ONT JOUE : '#ResultList}
+                        % {Browser.browse 'AIE TOUS ONT JOUE : '#ResultList}
                         IsDone = true
                         {TreatStream L nil 0}
                     else
