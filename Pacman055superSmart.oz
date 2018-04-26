@@ -93,9 +93,12 @@ in
       Temp2= Temp*Temp
       {CalculateHeuristicItems Position T Dist1+Temp Dist2+Temp2 ItemsLength}
      
-      [] nil then
+      [] nil then if (ItemsLength \=0) then 
       Temp3={Float.toInt {Float.ceil {Float.'/' {Int.toFloat (Dist1*Dist1 - Dist2)} {Int.toFloat ItemsLength}}}}
       Temp3
+      else
+      0
+      end
      % Dist1*Dist1 - Dist2%Positive answer
     end
   end
