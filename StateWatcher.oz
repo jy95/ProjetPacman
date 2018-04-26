@@ -598,7 +598,7 @@ in
                     {WarningFunctions.setMode PortGUI hunt Pacmans Ghosts}
                     % prévenir tous les joueurs du changement de mode
                     {WarningFunctions.hideBonus PortGUI Position Pacmans}
-                    
+
                     % mettre cette position comme off
                     NewMode = hunt
                     NewBonusOff =  Position|BonusOff
@@ -629,10 +629,6 @@ in
                 NewTimePoints = TempState.pointsAndTime
             end
             
-            {Browser.browse 'currentState'#[
-                bonusTime#NewBonusTime
-             ]}
-
             % Update du final state
              {Record.adjoinList TempState [
                 % à voir si on conserve
