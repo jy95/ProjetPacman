@@ -7,7 +7,7 @@ COPY=cp # sur Windows , remplacer par copy
 REMOVE=rm # sur Windows , remplacer par del
 
 # fichiers
-FILES=Input CommonUtils WarningFunctions StateWatcher Ghost000other Pacman000other PlayerManager GUI Main
+FILES=Input CommonUtils WarningFunctions StateWatcher Ghost055other Pacman055superSmart Pacman055other PlayerManager GUI Main
 SOURCES=$(FILES:=.oz)
 OBJECTS=$(FILES:=.ozf)
 PICTURES_FOLDER=pics
@@ -30,8 +30,8 @@ bin:
 
 # besoin des joueurs random pour l'instant ; par la suite remplacer par joueurs des autres
 copyPlayers: bin
-	$(COPY) Ghost000random.ozf $(addprefix $(COMPILED_FOLDER)/,Ghost000random.ozf)
-	$(COPY) Ghost000random.ozf $(addprefix $(COMPILED_FOLDER)/,Pacman000random.ozf)
+	$(COPY) Ghost055random.ozf $(addprefix $(COMPILED_FOLDER)/,Ghost055random.ozf)
+	$(COPY) Ghost055random.ozf $(addprefix $(COMPILED_FOLDER)/,Pacman055random.ozf)
 
 # Compile tous les fichiers et stocker dans bin
 $(OBJECTS):	$(SOURCES)
