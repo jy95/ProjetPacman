@@ -31,8 +31,8 @@ bin:
 
 # besoin des joueurs random pour l'instant ; par la suite remplacer par joueurs des autres
 copyPlayers: bin
-	$(COPY) Ghost055random.ozf $(addprefix $(COMPILED_FOLDER)/,Ghost055random.ozf)
-	$(COPY) Ghost055random.ozf $(addprefix $(COMPILED_FOLDER)/,Pacman055random.ozf)
+	$(COPY) Ghost000random.ozf $(addprefix $(COMPILED_FOLDER)/,Ghost000random.ozf)
+	$(COPY) Pacman000random.ozf $(addprefix $(COMPILED_FOLDER)/,Pacman000random.ozf)
 	cp -r $(addprefix $(OTHER_PLAYERS_FOLDER)/,.) $(COMPILED_FOLDER)
 
 # Compile tous les fichiers et stocker dans bin
