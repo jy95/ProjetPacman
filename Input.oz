@@ -86,19 +86,15 @@ in
 %%%%
 
    NbLives = 2
-<<<<<<< HEAD
-   HuntTime = 500
-=======
    HuntTime = 5
->>>>>>> d5fb90f9a0db2cc16c8e0ec298847cf825b8fc7e
    
 %%%% Players description %%%%
 
    NbPacman = 2
-   Pacman = [pacman055superSmart pacman001other] % pacman000random 
+   Pacman = [pacman055superSmart pacman055random]
    ColorPacman = [yellow red]
    NbGhost = 2
-   Ghost = [ghost001other ghost055random]%ghost000random
+   Ghost = [ghost055random ghost055random]
    ColorGhost = [blue red]% black red white]
 
 %%%% Thinking parameters (only in simultaneous) %%%%

@@ -285,9 +285,9 @@ define
       [] guiGhost(id:_ ghost:Handle color:Color)|Next then
 	 case M
 	 of classic then
-	    {Handle set(bg:Color)}
-	 [] hunt then
 	    {Handle set(bg:blue)}
+	 [] hunt then
+	    {Handle set(bg:black)}
 	 end
 	 State.1|{ChangeMode M Next}
       end

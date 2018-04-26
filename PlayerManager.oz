@@ -6,12 +6,14 @@ import
    Ghost055other
    Pacman055superSmart
 
-
    % Les joueurs des autres groupes
    Pacman080chaser
    Ghost080chaser
    Pacman001other
    Ghost001other
+   Ghost061other
+   Pacman061human
+   Pacman061other
 
 export
    playerGenerator:PlayerGenerator
@@ -31,8 +33,11 @@ in
       % Les joueurs des autres groupes
       [] pacman080chaser then {Pacman080chaser.portPlayer ID}
       [] ghost080chaser then {Ghost080chaser.portPlayer ID}
-      [] ghost001other then {Ghost001other.portPlayer ID}
+      [] ghost001other then {Ghost001other.portPlayer ID}%groupe85
       [] pacman001other then {Pacman001other.portPlayer ID}
+      [] pacman061other then {Pacman061other.portPlayer ID}
+      [] ghost061other then {Ghost061other.portPlayer ID}
+      [] pacman061human then {Pacman061human.portPlayer ID}
       end
    end
 end

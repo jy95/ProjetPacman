@@ -63,10 +63,6 @@ in
             else
                 % Time.time return a number of seconds
                 % Return true if number of seconds to wait to have a new spawn is ok
-<<<<<<< HEAD
-                
-=======
->>>>>>> d5fb90f9a0db2cc16c8e0ec298847cf825b8fc7e
                 ({Time.time} - ConstraintTime) =< TimeStart
             end
         end
