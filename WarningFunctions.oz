@@ -1,6 +1,6 @@
 functor
-import
-Browser
+%import
+%Browser
 export
     % Toutes nos fonctions du type SpawnAllPlayers ,etc qui préviennent la GUI et/ou les joueurs
    spawnAllPoints:SpawnAllPoints
