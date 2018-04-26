@@ -7,7 +7,7 @@ COPY=cp # sur Windows , remplacer par copy
 REMOVE=rm # sur Windows , remplacer par del
 
 # fichiers
-FILES=Input CommonUtils WarningFunctions StateWatcher Ghost055other Pacman055superSmart Pacman055other PlayerManager GUI Main
+FILES=Input CommonUtils WarningFunctions StateWatcher Ghost055other Pacman055superSmart Pacman055superShy Pacman055other PlayerManager GUI Main
 SOURCES=$(FILES:=.oz)
 OBJECTS=$(FILES:=.ozf)
 PICTURES_FOLDER=pics
