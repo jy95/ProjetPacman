@@ -12,8 +12,7 @@ define
    ChooseNextPosition
    TargetsStateModification
    CalculateHeuristic
-   CalculateHeuristicBonus
-   CalculateHeuristicGhost
+   CalculateHeuristicItems
    CalculateHeuristicPoint
    BestMove
 in
@@ -61,12 +60,12 @@ in
   fun {CalculateHeuristic Position Ghosts Bonus Points Mode}
       Temp in
       if Mode == 0 then %Classic
-        Temp={CalculateHeuristicGhost Position Ghosts 0}+
-        {CalculateHeuristicBonus Position Bonus 0 0}+
+        Temp={CalculateHeuristicItems Position Ghosts 0 0 {List.length Ghosts}}-
+        {CalculateHeuristicItems Position Bonus 0 0 {List.length Bonus}}+
         {CalculateHeuristicPoint Position Points}
       else %Hunt
-        Temp=~{CalculateHeuristicGhost Position Ghosts 0}+
-        {CalculateHeuristicBonus Position Bonus 0 0}+
+        Temp=~{CalculateHeuristicItems Position Ghosts 0 0 {List.length Ghosts}}-
+        {CalculateHeuristicItems Position Bonus 0 0 {List.length Bonus}}+
         {CalculateHeuristicPoint Position Points}
       end
       Temp
@@ -74,35 +73,30 @@ in
 
   %Heuristic about Points
   %Points is the list of points up
-  %10 is an arbitrary value to be coherent with other heuristics
+  %1 is an arbitrary value to be coherent with other heuristics
   fun {CalculateHeuristicPoint Position Points}
-     if {List.member Position Points} then 10
+     if {List.member Position Points} then 1
      else 0
      end
   end
 
-  %Heuristic about Ghost
-  %Avoid Ghosts
-  %H(x)^2 to be logical with other heuristics
-  fun {CalculateHeuristicGhost Position Ghosts Answer}
-    case Ghosts 
-      of H|T then 
-      {CalculateHeuristicGhost Position T Answer+{Mannathan Position H.position}}
-      [] nil then Answer*Answer %Positive answer
-    end
-  end
-
-  %Heuristic about Bonus
-  %Being at distance d from both bonus is worse than being at d-1 from bonus1 and d+1 from bonus2
-  %(Bonus1+Bonus2)^2 - (Bonus1^2 + Bonus2^2)
-  fun {CalculateHeuristicBonus Position Bonus Dist1 Dist2}
-  Temp Temp2 in
-    case Bonus     
+  %Heuristic about Items
+  %Being at distance d from both items is worse than being at d-1 from item1 and d+1 from item2
+  %(Item1+Item2)^2 - (Item1^2 + Item2^2) /NbItem
+  fun {CalculateHeuristicItems Position Items Dist1 Dist2 ItemsLength}
+  Temp Temp2 Temp3 in
+    case Items     
       of H|T then
-      Temp = {Mannathan Position H}
+        case H of target(id:_ position:pt(x:_ y:_)) then Temp = {Mannathan Position H.position}
+        else Temp = {Mannathan Position H}
+        end
       Temp2= Temp*Temp
-      {CalculateHeuristicBonus Position T Dist1+Temp Dist2+Temp2}
-      [] nil then ~(Dist1*Dist1 - Dist2) %Negative answer
+      {CalculateHeuristicItems Position T Dist1+Temp Dist2+Temp2 ItemsLength}
+     
+      [] nil then
+      Temp3={Float.toInt {Float.ceil {Float.'/' {Int.toFloat (Dist1*Dist1 - Dist2)} {Int.toFloat ItemsLength}}}}
+      Temp3
+     % Dist1*Dist1 - Dist2%Positive answer
     end
   end
 
@@ -140,7 +134,7 @@ in
     case Mode
       % Classic: Avoid Ghost, go to the bonuses and favorize points eating
       of classic then      
-        {Delay 500}
+        %{Delay 500}
 
         {BestMove ValidMoves Ghosts PositionsBonus.true ValidMoves.1 PositionsPoints.true 0 {CalculateHeuristic ValidMoves.1 Ghosts PositionsBonus.true PositionsPoints.true 0}}
 
